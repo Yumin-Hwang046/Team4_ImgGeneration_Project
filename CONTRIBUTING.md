@@ -12,9 +12,9 @@ fix/버그명               ← 버그 수정
 ```
 
 ### 브랜치 이름 규칙
-- 기본: `feature/단계명` (예: `feature/model`)
-- 같은 단계를 여러 명이 작업할 경우 이름 접미사 추가:
-  `feature/model-이름` (예: `feature/model-슬기`)
+- 기본: `feature/단계명-#이슈번호` (예: `feature/model-#1`)
+- 같은 이슈를 여러 명이 작업할 경우 이름 접미사 추가:
+  `feature/단계명-#이슈번호-이름` (예: `feature/model-#1-슬기`)
 
 ## PR 규칙
 - `dev` 브랜치로 PR 생성
