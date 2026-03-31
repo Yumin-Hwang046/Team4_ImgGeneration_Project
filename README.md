@@ -4,29 +4,6 @@
 
 <br>
 
-## �️ 기술 스택
-
-**언어**
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
-![Jupyter](https://img.shields.io/badge/Jupyter-F37626?style=flat&logo=jupyter&logoColor=white)
-
-**프레임워크**
-![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat&logo=next.js&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
-
-**라이브러리**
-![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat&logo=openai&logoColor=white)
-![HuggingFace](https://img.shields.io/badge/HuggingFace-FFD21E?style=flat&logo=huggingface&logoColor=black)
-
-**도구**
-![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)
-![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)
-![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white)
-
-<br>
-
 ---
 
 ## 1. 📌 프로젝트 개요
@@ -52,6 +29,27 @@
 - 사진 한 장으로 SNS 광고 즉시 제작 → 소상공인 디지털 마케팅 진입 장벽 해소
 - 반복 사용으로 브랜드 이미지 일관성 유지
 
+### 🛠️ 기술 스택
+
+**언어**
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![Jupyter](https://img.shields.io/badge/Jupyter-F37626?style=flat&logo=jupyter&logoColor=white)
+
+**프레임워크**
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat&logo=next.js&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)
+
+**라이브러리**
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat&logo=openai&logoColor=white)
+![HuggingFace](https://img.shields.io/badge/HuggingFace-FFD21E?style=flat&logo=huggingface&logoColor=black)
+
+**도구**
+![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white)
+![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)
+![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white)
+
 <br>
 
 ---
@@ -65,14 +63,21 @@ npm install
 npm run dev
 ```
 
-### 2) 백엔드
-> 백엔드 기술 스택 확정 후 업데이트 예정
+### 2) 백엔드 (Python 가상환경)
+```bash
+# 가상환경 생성 및 활성화
+uv venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# 패키지 설치
+uv pip install -r requirements.txt
+```
 
 ### 3) GPU 사용 시 (선택사항)
 NVIDIA GPU 환경에서 torch CUDA 버전이 필요한 경우:
 ```bash
 # CUDA 12.4 예시
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 ```
 
 ### 4) 환경 변수 (.env)
@@ -80,6 +85,7 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 ```
 OPENAI_API_KEY=YourOpenAIKey
 ```
+
 
 <br>
 
