@@ -1,6 +1,9 @@
 # 환경 변수
 .env
 
+# stitch_ 원본 폴더 (docs/ui/로 정리됨)
+stitch_/
+
 # Python
 __pycache__/
 *.py[cod]
