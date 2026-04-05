@@ -4,6 +4,9 @@
 # stitch_ 원본 폴더 (docs/ui/로 정리됨)
 stitch_/
 
+# 프리셋 이미지
+backend/assets/presets/
+
 # Python
 __pycache__/
 *.py[cod]
