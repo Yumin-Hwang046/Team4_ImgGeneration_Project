@@ -47,6 +47,15 @@ def make_background_mask(image: Image.Image) -> Image.Image:
     return mask
 
 
+def build_background_prompt(user_prompt: str) -> str:
+    base = (
+        "Replace ONLY the background with the following description. "
+        "Keep the product and plate unchanged. "
+        "Do not alter product texture, size, or position."
+    )
+    return f"{base} Background description: {user_prompt.strip()}"
+
+
 def generate_image_case3_controlnet(
     user_image_path: str,
     user_prompt: str,
@@ -70,17 +79,6 @@ def generate_image_case3_controlnet(
     # Step 2-2) 입력 이미지 로드/리사이즈
     image = Image.open(user_image_path).convert("RGB").resize((width, height), Image.BICUBIC)
 
-    # Step 2-2-1) 제품 분리 (rembg)
-    if use_rembg:
-        cutout = remove(image)
-        if isinstance(cutout, Image.Image):
-            cutout = cutout.convert("RGBA")
-        else:
-            cutout = Image.open(io.BytesIO(cutout)).convert("RGBA")
-        cutout = cutout.resize((width, height), Image.LANCZOS)
-    else:
-        cutout = image.convert("RGBA")
-
     # Step 2-3) 장치 및 dtype
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
@@ -102,8 +100,9 @@ def generate_image_case3_controlnet(
     generator = torch.Generator(device=device).manual_seed(seed) if seed else None
 
     # Step 5) 생성 (배경만 변경)
+    final_prompt = build_background_prompt(user_prompt)
     result = pipe(
-        prompt=user_prompt,
+        prompt=final_prompt,
         image=image,
         mask_image=mask,
         num_inference_steps=steps,
