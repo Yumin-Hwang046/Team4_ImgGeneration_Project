@@ -1,9 +1,11 @@
+import io
 import os
 import time
 from typing import Optional
 
 import torch
 from PIL import Image
+from rembg import remove
 from transformers import DPTForDepthEstimation, DPTImageProcessor
 from diffusers import ControlNetModel, StableDiffusionXLControlNetPipeline
 
@@ -62,6 +64,7 @@ def generate_image_case3_controlnet(
     controlnet_scale: float = 0.8,
     steps: int = 30,
     guidance: float = 7.0,
+    use_rembg: bool = True,
     seed: Optional[int] = None,
 ) -> dict:
     """
@@ -76,6 +79,17 @@ def generate_image_case3_controlnet(
 
     # Step 2-2) 입력 이미지 로드/리사이즈
     image = Image.open(user_image_path).convert("RGB").resize((width, height), Image.BICUBIC)
+
+    # Step 2-2-1) 제품 분리 (rembg)
+    if use_rembg:
+        cutout = remove(image)
+        if isinstance(cutout, Image.Image):
+            cutout = cutout.convert("RGBA")
+        else:
+            cutout = Image.open(io.BytesIO(cutout)).convert("RGBA")
+        cutout = cutout.resize((width, height), Image.LANCZOS)
+    else:
+        cutout = image.convert("RGBA")
 
     # Step 2-3) 장치 및 dtype
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -112,7 +126,12 @@ def generate_image_case3_controlnet(
         generator=generator,
     ).images[0]
 
-    # Step 6) 저장 및 반환
+    # Step 6) 제품 합성 (원본 제품을 배경 위에)
+    if use_rembg:
+        background = result.convert("RGBA")
+        result = Image.alpha_composite(background, cutout).convert("RGB")
+
+    # Step 7) 저장 및 반환
     os.makedirs(GENERATED_ROOT, exist_ok=True)
     filename = f"sdxl_case3_{int(time.time())}.png"
     out_path = os.path.join(GENERATED_ROOT, filename)
