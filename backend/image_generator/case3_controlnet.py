@@ -7,7 +7,7 @@ import torch
 from PIL import Image
 from rembg import remove
 from transformers import DPTForDepthEstimation, DPTImageProcessor
-from diffusers import ControlNetModel, StableDiffusionXLControlNetPipeline
+from diffusers import ControlNetModel, StableDiffusionXLControlNetImg2ImgPipeline
 
 # 모델 ID
 SDXL_BASE_ID = "stabilityai/stable-diffusion-xl-base-1.0"
@@ -65,6 +65,7 @@ def generate_image_case3_controlnet(
     steps: int = 30,
     guidance: float = 7.0,
     use_rembg: bool = True,
+    strength: float = 0.5,
     seed: Optional[int] = None,
 ) -> dict:
     """
@@ -105,7 +106,7 @@ def generate_image_case3_controlnet(
         use_safetensors=True,
         variant="fp16" if device == "cuda" else None,
     )
-    pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
+    pipe = StableDiffusionXLControlNetImg2ImgPipeline.from_pretrained(
         SDXL_BASE_ID,
         controlnet=controlnet,
         torch_dtype=dtype,
@@ -119,10 +120,12 @@ def generate_image_case3_controlnet(
     # Step 5) 생성
     result = pipe(
         prompt=user_prompt,
-        image=depth_map,
+        image=image,
+        control_image=depth_map,
         controlnet_conditioning_scale=controlnet_scale,
         num_inference_steps=steps,
         guidance_scale=guidance,
+        strength=strength,
         generator=generator,
     ).images[0]
 
