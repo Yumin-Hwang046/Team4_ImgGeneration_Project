@@ -6,8 +6,6 @@ import torch
 from PIL import Image
 from diffusers import StableDiffusionXLImg2ImgPipeline
 
-from image_generator.prompt_builder import build_sdxl_prompt
-
 # SDXL Base 모델 (Case2 baseline: Img2Img)
 SDXL_BASE_ID = "stabilityai/stable-diffusion-xl-base-1.0"
 
@@ -66,8 +64,8 @@ def resolve_reference_image(user_reference_path: Optional[str], preset_key: Opti
 
 
 def generate_image_case2(
-    image_analysis_text: str,
-    mood_key: str,
+    user_prompt: str,
+    mood_key: str | None = None,
     format_type: str = "피드",
     user_reference_path: Optional[str] = None,
     preset_key: Optional[str] = None,
@@ -84,8 +82,10 @@ def generate_image_case2(
     # Step 2-1) 레퍼런스 이미지 결정
     ref_path = resolve_reference_image(user_reference_path, preset_key)
 
-    # Step 2-2) 프롬프트 생성
-    prompt = build_sdxl_prompt(image_analysis_text, mood_key)
+    # Step 2-2) 사용자 입력 프롬프트 사용 (필요 시 무드만 추가)
+    prompt = user_prompt.strip()
+    if mood_key:
+        prompt = f"{prompt}, {mood_key}"
 
     # Step 2-3) 해상도 결정
     width, height = get_sdxl_size(format_type)
@@ -133,10 +133,10 @@ def generate_image_case2(
 
 if __name__ == "__main__":
     # 테스트: 프리셋(clean) 사용
-    test_analysis = "하얀 배경 위에 커피 한 잔이 놓여 있습니다. 조명이 부드럽습니다."
+    test_prompt = '이미지에 "신메뉴 출시"라는 광고 문구를 추가해줘.'
     test_mood = "깔끔한 상품 홍보"
     result = generate_image_case2(
-        image_analysis_text=test_analysis,
+        user_prompt=test_prompt,
         mood_key=test_mood,
         format_type="피드",
         preset_key="clean",
