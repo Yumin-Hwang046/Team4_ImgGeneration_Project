@@ -11,6 +11,8 @@ torch>=2.4
 torchvision>=0.19
 transformers>=4.44
 optimum>=1.21
+diffusers>=0.30
+accelerate>=0.30
 
 # Model Optimization
 onnx>=1.15
