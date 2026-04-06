@@ -142,15 +142,14 @@ backend/image_analyzer/
 
 전체 파이프라인이 제공하는 핵심 기능은 크게 **1. 광고 문구 생성**과 **2. 이미지 생성(3가지 Case)** 총 4가지로 나뉩니다.
 
-### 🔄 기능별 전체 파이프라인 작동 흐름
-* **기능 1. 광고 문구 단독 생성 (Image-to-Text)**
-  * 흐름: 업로드/프리셋 이미지를 `image_analyzer`가 분석 ➡️ `text_generator`가 분석 결과(제품 특징, 무드)를 바탕으로 마케팅 카피와 해시태그를 생성하여 사용자에게 반환 (`image_generator` 생략).
-* **기능 2-1. 프롬프트 기반 이미지 생성 (Case 1)**
-  * 흐름: (이미지가 없으므로 `image_analyzer` 생략 가능) ➡️ `text_generator`에서 이미지 생성을 위한 프롬프트 작성 ➡️ `image_generator` 내부의 `case1_sdxl.py` 로직이 실행되어 SDXL Base+Refiner 생성.
-* **기능 2-2. 레퍼런스 스타일 및 무드 벤치마킹 이미지 생성 (Case 2)**
-  * 흐름: 레퍼런스 이미지를 `image_analyzer`가 분석 ➡️ `text_generator`가 생성 프롬프트 조합 ➡️ `image_generator` 내부의 `case2_sdxl.py` 로직이 실행되어 레퍼런스와 프롬프트를 동시에 모델에 전달.
-* **기능 2-3. 원본 제품 형태 완벽 유지 이미지 생성 (Case 3)**
-  * 흐름: 제품 이미지를 `image_analyzer`가 분석 ➡️ `text_generator`가 배경 합성에 쓸 프롬프트 조합 ➡️ `image_generator` 내부의 `case3_controlnet.py` 로직이 실행되어 제품 형태(외곽선) 고정 및 배경 합성/렌더링.
+### 🔄 기능별 전체 파이프라인 작동 흐름 (요약표)
+
+| 기능 | 입력 | 흐름 | 관련 모듈/파일 |
+|---|---|---|---|
+| **기능 1. 광고 문구 단독 생성 (Image-to-Text)** | 업로드/프리셋 이미지 + 무드 | `image_analyzer` 분석 ➡️ `text_generator` 문구/해시태그 생성 | `image_analyzer` / `text_generator` |
+| **기능 2-1. 프롬프트 기반 이미지 생성 (Case 1)** | 프롬프트 + 무드 | (이미지 없음 → 분석 생략 가능) ➡️ `text_generator` 프롬프트 조합 ➡️ `case1_sdxl.py` 실행 | `text_generator` / `image_generator/case1_sdxl.py` |
+| **기능 2-2. 스타일 및 무드 벤치마킹 (Case 2)** | 레퍼런스 이미지 + 무드 | `image_analyzer` 분석 ➡️ `text_generator` 프롬프트 조합 ➡️ `case2_sdxl.py` 실행 | `image_analyzer` / `text_generator` / `image_generator/case2_sdxl.py` |
+| **기능 2-3. 제품 형태 유지 배경 합성 (Case 3)** | 제품 이미지 + 무드 | `image_analyzer` 분석 ➡️ `text_generator` 프롬프트 조합 ➡️ `case3_controlnet.py` 실행 | `image_analyzer` / `text_generator` / `image_generator/case3_controlnet.py` |
 
 ### 🚀 파이프라인 4단계 핵심 로직 구축 상세 계획
 | 상태 | 단계 | 핵심 역할 | 작업 내용 |
