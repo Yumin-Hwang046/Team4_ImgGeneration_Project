@@ -3,11 +3,13 @@ import time
 import torch
 from diffusers import StableDiffusionXLPipeline, StableDiffusionXLImg2ImgPipeline
 
-from image_generator.prompt_builder import build_dalle_prompt
+from image_generator.prompt_builder import build_sdxl_prompt
 
 # SDXL 모델 ID (Base + Refiner 조합)
 SDXL_BASE_ID = "stabilityai/stable-diffusion-xl-base-1.0"
 SDXL_REFINER_ID = "stabilityai/stable-diffusion-xl-refiner-1.0"
+# 공개 URL prefix (FastAPI에서 정적 서빙할 때 사용)
+PUBLIC_URL_PREFIX = os.getenv("GENERATED_URL_PREFIX", "/static/generated")
 
 
 def get_sdxl_size(format_type: str) -> tuple[int, int]:
@@ -31,13 +33,13 @@ def generate_image_sdxl_quality(
     guidance: float = 7.0,
     high_noise_frac: float = 0.8,
     seed: int | None = None,
-) -> str:
+) -> dict:
     """
     [Step 1] SDXL Base + Refiner로 고품질 이미지를 생성합니다.
     GCP L4 GPU 기준으로 fp16 사용, 1024 해상도 권장.
     """
     # Step 1-1) 한글 분석 텍스트 + 무드를 영어 프롬프트로 변환
-    prompt = build_dalle_prompt(image_analysis_text, mood_key)
+    prompt = build_sdxl_prompt(image_analysis_text, mood_key)
 
     # Step 1-2) 해상도 결정
     width, height = get_sdxl_size(format_type)
@@ -95,7 +97,10 @@ def generate_image_sdxl_quality(
     out_path = os.path.join(out_dir, filename)
     image.save(out_path)
 
-    return out_path
+    return {
+        "path": out_path,
+        "url": f"{PUBLIC_URL_PREFIX}/{filename}",
+    }
 
 
 if __name__ == "__main__":
@@ -104,5 +109,7 @@ if __name__ == "__main__":
     test_mood = "프리미엄 매장·상품"
     test_format = "스토리"
 
-    path = generate_image_sdxl_quality(test_analysis, test_mood, test_format)
-    print("✅ 생성 완료:", path)
+    result = generate_image_sdxl_quality(test_analysis, test_mood, test_format)
+    print("✅ 생성 완료:")
+    print(" - path:", result["path"])
+    print(" - url :", result["url"])

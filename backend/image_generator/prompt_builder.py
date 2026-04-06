@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def build_dalle_prompt(image_analysis_text: str, mood_key: str) -> str:
+def build_sdxl_prompt(image_analysis_text: str, mood_key: str) -> str:
     """
     한글로 된 '사진 분석 텍스트'와 '무드'를 입력받아,
     DALL-E 3가 가장 잘 이해할 수 있는 최적화된 영문 프롬프트(지시문)로 변환해 줍니다.
