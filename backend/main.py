@@ -1,1 +1,11 @@
-# 백엔드 진입점 (기술 스택 확정 후 구현 예정)
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+
+app = FastAPI()
+
+# 정적 파일 서빙: /static → backend/assets
+app.mount(
+    "/static",
+    StaticFiles(directory="assets"),
+    name="static",
+)
