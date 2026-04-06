@@ -4,7 +4,7 @@ from typing import Optional
 
 import torch
 from PIL import Image
-from diffusers import StableDiffusionXLPipeline
+from diffusers import AutoPipelineForText2Image
 
 # SDXL Base 모델
 SDXL_BASE_ID = "stabilityai/stable-diffusion-xl-base-1.0"
@@ -14,7 +14,7 @@ IP_ADAPTER_REPO = os.getenv("IP_ADAPTER_REPO", "h94/IP-Adapter")
 IP_ADAPTER_SUBFOLDER = os.getenv("IP_ADAPTER_SUBFOLDER", "sdxl_models")
 IP_ADAPTER_WEIGHT = os.getenv(
     "IP_ADAPTER_WEIGHT",
-    "ip-adapter_sdxl_vit-h.safetensors"
+    "ip-adapter_sdxl.bin"
 )
 
 # 경로 설정
@@ -114,8 +114,8 @@ def generate_image_case2_ip_adapter(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
 
-    # Step 3) SDXL 파이프라인 로딩
-    pipe = StableDiffusionXLPipeline.from_pretrained(
+    # Step 3) SDXL T2I 파이프라인 로딩 (IP-Adapter 권장 방식)
+    pipe = AutoPipelineForText2Image.from_pretrained(
         SDXL_BASE_ID,
         torch_dtype=dtype,
         use_safetensors=True,
