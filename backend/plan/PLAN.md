@@ -111,8 +111,8 @@ backend/text_generator/
 ### 파일 구조
 ```
 backend/image_generator/
-├── case1_text_to_image.py    # Case 1: 텍스트 → 이미지
-├── case2_style_transfer.py   # Case 2: 레퍼런스 스타일 적용
+├── case1_sdxl.py             # Case 1: 텍스트 → 이미지
+├── case2_sdxl.py             # Case 2: 레퍼런스 스타일 적용
 ├── case3_product_preserve.py # Case 3: 제품 이미지 보존
 ├── prompt_builder.py         # 무드별 이미지 프롬프트 빌더
 ├── resize.py                 # 광고 사이즈별 후처리
@@ -146,9 +146,9 @@ backend/image_analyzer/
 * **기능 1. 광고 문구 단독 생성 (Image-to-Text)**
   * 흐름: 업로드/프리셋 이미지를 `image_analyzer`가 분석 ➡️ `text_generator`가 분석 결과(제품 특징, 무드)를 바탕으로 마케팅 카피와 해시태그를 생성하여 사용자에게 반환 (`image_generator` 생략).
 * **기능 2-1. 프롬프트 기반 이미지 생성 (Case 1)**
-  * 흐름: (이미지가 없으므로 `image_analyzer` 생략 가능) ➡️ `text_generator`에서 이미지 생성을 위한 프롬프트 작성 ➡️ `image_generator` 내부의 `case1_sdxl_quality.py` 로직이 실행되어 SDXL Base+Refiner 생성.
+  * 흐름: (이미지가 없으므로 `image_analyzer` 생략 가능) ➡️ `text_generator`에서 이미지 생성을 위한 프롬프트 작성 ➡️ `image_generator` 내부의 `case1_sdxl.py` 로직이 실행되어 SDXL Base+Refiner 생성.
 * **기능 2-2. 레퍼런스 스타일 및 무드 벤치마킹 이미지 생성 (Case 2)**
-  * 흐름: 레퍼런스 이미지를 `image_analyzer`가 분석 ➡️ `text_generator`가 생성 프롬프트 조합 ➡️ `image_generator` 내부의 `case2_style_transfer.py` 로직이 실행되어 레퍼런스와 프롬프트를 동시에 모델에 전달.
+  * 흐름: 레퍼런스 이미지를 `image_analyzer`가 분석 ➡️ `text_generator`가 생성 프롬프트 조합 ➡️ `image_generator` 내부의 `case2_sdxl.py` 로직이 실행되어 레퍼런스와 프롬프트를 동시에 모델에 전달.
 * **기능 2-3. 원본 제품 형태 완벽 유지 이미지 생성 (Case 3)**
   * 흐름: 제품 이미지를 `image_analyzer`가 분석 ➡️ `text_generator`가 배경 합성에 쓸 프롬프트 조합 ➡️ `image_generator` 내부의 `case3_controlnet.py` 로직이 실행되어 제품 형태(외곽선) 고정 및 배경 합성/렌더링.
 
