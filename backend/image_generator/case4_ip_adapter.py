@@ -73,8 +73,9 @@ def generate_image_case4_ip_adapter(
 
     generator = torch.Generator(device=device).manual_seed(seed) if seed else None
 
+    final_prompt = build_case4_prompt(user_prompt)
     image = pipe(
-        prompt=user_prompt,
+        prompt=final_prompt,
         image=init_image,
         ip_adapter_image=ref_image,
         strength=strength,
@@ -94,6 +95,16 @@ def generate_image_case4_ip_adapter(
         "user_image_path": user_image_path,
         "reference_image_path": reference_image_path,
     }
+
+
+def build_case4_prompt(user_prompt: str) -> str:
+    base = (
+        "Use the food from the user image exactly. "
+        "Replace ONLY the background and table setting with the reference image style. "
+        "Keep the food size, shape, texture, and position unchanged. "
+        "Photorealistic product photo, studio lighting, sharp focus."
+    )
+    return f"{base} {user_prompt.strip()}"
 
 
 if __name__ == "__main__":
