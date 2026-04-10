@@ -18,6 +18,8 @@ IP_ADAPTER_WEIGHT = os.getenv("IP_ADAPTER_WEIGHT", "ip-adapter_sdxl.bin")
 GENERATED_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "generated"))
 PUBLIC_URL_PREFIX = os.getenv("GENERATED_URL_PREFIX", "/static/generated")
 
+NEGATIVE_PROMPT = "swapped food, altered food, wrong food, extra food"
+
 
 def get_sdxl_size(format_type: str) -> tuple[int, int]:
     if format_type == "스토리":
@@ -37,6 +39,7 @@ def generate_image_case4_ip_adapter(
     strength: float = 0.6,
     steps: int = 30,
     guidance: float = 7.0,
+    output_name: Optional[str] = None,
     seed: Optional[int] = None,
 ) -> dict:
     """
@@ -76,6 +79,7 @@ def generate_image_case4_ip_adapter(
     final_prompt = build_case4_prompt(user_prompt)
     image = pipe(
         prompt=final_prompt,
+        negative_prompt=NEGATIVE_PROMPT,
         image=init_image,
         ip_adapter_image=ref_image,
         strength=strength,
@@ -85,7 +89,7 @@ def generate_image_case4_ip_adapter(
     ).images[0]
 
     os.makedirs(GENERATED_ROOT, exist_ok=True)
-    filename = f"sdxl_case4_ip_{int(time.time())}.png"
+    filename = output_name or f"sdxl_case4_ip_{int(time.time())}.png"
     out_path = os.path.join(GENERATED_ROOT, filename)
     image.save(out_path)
 
