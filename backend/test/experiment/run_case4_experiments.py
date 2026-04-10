@@ -115,6 +115,22 @@ PROMPT_MAP = {
 # 실험 실행
 # ─────────────────────────────────────────────
 
+GENERATED_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "assets", "generated"))
+
+
+def get_next_exp_dir() -> str:
+    if not os.path.isdir(GENERATED_ROOT):
+        return "exp_001"
+    candidates = []
+    for d in os.listdir(GENERATED_ROOT):
+        if d.startswith("exp_") and d[4:].isdigit():
+            candidates.append(int(d[4:]))
+    next_id = max(candidates) + 1 if candidates else 1
+    return f"exp_{next_id:03d}"
+
+
+EXP_DIR = get_next_exp_dir()
+
 RUN_TS = datetime.now().strftime("%Y%m%d_%H%M%S")
 LOG_PATH = os.path.join(BASE_DIR, f"case4_log_{RUN_TS}.csv")
 
@@ -150,6 +166,7 @@ for idx, exp in enumerate(EXPERIMENTS, 1):
             reference_image_path=exp["ref"],
             user_prompt=PROMPT_MAP[exp["mood"]],
             output_name=output_name,
+            output_subdir=EXP_DIR,
             # ip_adapter_scale: 레퍼런스 스타일 반영 강도 (0~1, 기본값 0.7)
             # strength: 원본 이미지 변형 강도 (0~1, 낮을수록 원본 유지)
             # 두 값 모두 case4_ip_adapter.py 기본값 사용 (각각 0.7, 0.6)

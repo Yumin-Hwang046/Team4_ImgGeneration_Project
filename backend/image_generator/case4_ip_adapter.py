@@ -40,6 +40,7 @@ def generate_image_case4_ip_adapter(
     steps: int = 30,
     guidance: float = 7.0,
     output_name: Optional[str] = None,
+    output_subdir: Optional[str] = None,
     seed: Optional[int] = None,
 ) -> dict:
     """
@@ -88,9 +89,12 @@ def generate_image_case4_ip_adapter(
         generator=generator,
     ).images[0]
 
-    os.makedirs(GENERATED_ROOT, exist_ok=True)
+    out_dir = GENERATED_ROOT
+    if output_subdir:
+        out_dir = os.path.join(GENERATED_ROOT, output_subdir)
+    os.makedirs(out_dir, exist_ok=True)
     filename = output_name or f"sdxl_case4_ip_{int(time.time())}.png"
-    out_path = os.path.join(GENERATED_ROOT, filename)
+    out_path = os.path.join(out_dir, filename)
     image.save(out_path)
 
     return {
