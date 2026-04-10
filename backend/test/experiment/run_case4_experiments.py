@@ -18,6 +18,8 @@ Case4 IP-Adapter 실험 일괄 실행 스크립트.
 import os
 import sys
 import time
+import csv
+from datetime import datetime
 
 # ─────────────────────────────────────────────
 # 경로 설정
@@ -113,25 +115,67 @@ PROMPT_MAP = {
 # 실험 실행
 # ─────────────────────────────────────────────
 
+RUN_TS = datetime.now().strftime("%Y%m%d_%H%M%S")
+LOG_PATH = os.path.join(BASE_DIR, f"case4_log_{RUN_TS}.csv")
+
+try:
+    import wandb
+    WANDB_ON = bool(os.getenv("WANDB_API_KEY"))
+except Exception:
+    WANDB_ON = False
+
+if WANDB_ON:
+    wandb.init(
+        project=os.getenv("WANDB_PROJECT", "case4-experiments"),
+        entity=os.getenv("WANDB_ENTITY", None),
+        name=RUN_TS,
+    )
+
 print(f"\n총 {len(EXPERIMENTS)}개 실험을 시작합니다.\n" + "=" * 50)
 
-for exp in EXPERIMENTS:
+with open(LOG_PATH, "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerow(["run_id", "exp_id", "user_image", "ref_image", "prompt", "output_path", "elapsed_sec"])
+
+for idx, exp in enumerate(EXPERIMENTS, 1):
     print(f"\n[{exp['id']}] 실행 중...")
     print(f"  user : {os.path.basename(exp['user'])}")
     print(f"  ref  : {os.path.basename(exp['ref'])}")
 
     t0 = time.time()
     try:
+        output_name = f"{RUN_TS}_case4_{exp['id']}_{idx:03d}.png"
         result = generate_image_case4_ip_adapter(
             user_image_path=exp["user"],
             reference_image_path=exp["ref"],
             user_prompt=PROMPT_MAP[exp["mood"]],
+            output_name=output_name,
             # ip_adapter_scale: 레퍼런스 스타일 반영 강도 (0~1, 기본값 0.7)
             # strength: 원본 이미지 변형 강도 (0~1, 낮을수록 원본 유지)
             # 두 값 모두 case4_ip_adapter.py 기본값 사용 (각각 0.7, 0.6)
         )
         elapsed = time.time() - t0
         print(f"  ✅ 완료 ({elapsed:.1f}s) → {result['path']}")
+
+        with open(LOG_PATH, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                idx,
+                exp["id"],
+                exp["user"],
+                exp["ref"],
+                PROMPT_MAP[exp["mood"]],
+                result["path"],
+                f"{elapsed:.1f}",
+            ])
+
+        if WANDB_ON:
+            wandb.log({
+                "exp_id": exp["id"],
+                "prompt": PROMPT_MAP[exp["mood"]],
+                "output": wandb.Image(result["path"]),
+                "elapsed_sec": elapsed,
+            })
     except Exception as e:
         print(f"  ❌ 실패: {e}")
 
