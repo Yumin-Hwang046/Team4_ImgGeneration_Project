@@ -15,6 +15,7 @@ class Case4Request(BaseModel):
     ip_adapter_scale: float = 0.7
     strength: float = 0.6
     output_name: Optional[str] = None
+    output_subdir: Optional[str] = None
 
 
 @router.post("/case4")
@@ -27,4 +28,5 @@ def case4(req: Case4Request):
         ip_adapter_scale=req.ip_adapter_scale,
         strength=req.strength,
         output_name=req.output_name,
+        output_subdir=req.output_subdir,
     )
