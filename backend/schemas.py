@@ -1,5 +1,5 @@
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 from pydantic import BaseModel, EmailStr
 
 
@@ -93,6 +93,30 @@ class GenerationRunResponse(BaseModel):
     status: str
     created_at: datetime
 
+
+# -----------------------------
+# Generated Images
+# -----------------------------
+class GeneratedImageItem(BaseModel):
+    id: int
+    image_url: str
+    final_image_url: Optional[str] = None
+    prompt_used: Optional[str] = None
+    version_no: int
+    image_type: str
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RegenerateImageResponse(BaseModel):
+    generation_id: int
+    status: str
+    message: str
+
+
 # -----------------------------
 # Generation Detail (조회용)
 # -----------------------------
@@ -119,10 +143,13 @@ class GenerationDetailResponse(BaseModel):
     image_mode: Optional[str] = None
     generation_status: Optional[str] = None
 
+    generated_images: Optional[List[GeneratedImageItem]] = None
+
     created_at: datetime
 
     class Config:
         from_attributes = True
+
 
 # -----------------------------
 # Generation List (보관함 목록용)
@@ -137,3 +164,120 @@ class GenerationListItem(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# -----------------------------
+# Calendar / Schedule
+# -----------------------------
+class CalendarEventCreate(BaseModel):
+    event_date: date
+    title: str
+    event_type: str
+    location: Optional[str] = None
+    description: Optional[str] = None
+
+
+class CalendarEventItem(BaseModel):
+    id: int
+    event_date: date
+    title: str
+    event_type: str
+    location: Optional[str] = None
+    description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CalendarGenerationItem(BaseModel):
+    id: int
+    menu_name: Optional[str] = None
+    business_category: Optional[str] = None
+    generated_image_url: Optional[str] = None
+    generation_status: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UploadScheduleCreate(BaseModel):
+    generation_id: int
+    scheduled_at: datetime
+    channel: str
+
+
+class UploadScheduleItem(BaseModel):
+    id: int
+    generation_id: int
+    scheduled_at: datetime
+    channel: str
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CalendarMonthDayItem(BaseModel):
+    date: str
+    weather_summary: Optional[str] = None
+    has_event: bool
+    has_generation: bool
+    has_schedule: bool
+
+
+class CalendarMonthResponse(BaseModel):
+    year: int
+    month: int
+    days: List[CalendarMonthDayItem]
+
+
+class CalendarWeatherItem(BaseModel):
+    summary: str
+
+
+class CalendarRecommendationItem(BaseModel):
+    recommended_time: str
+    recommended_channel: str
+    recommended_purpose: str
+    recommended_concept: str
+
+
+class CalendarDayResponse(BaseModel):
+    date: str
+    weather: CalendarWeatherItem
+    recommendation: CalendarRecommendationItem
+    events: List[CalendarEventItem]
+    generations: List[CalendarGenerationItem]
+    schedules: List[UploadScheduleItem]
+
+
+# -----------------------------
+# Instagram
+# -----------------------------
+class InstagramUploadRequest(BaseModel):
+    generation_id: int
+    channel: str  # instagram_feed / instagram_story
+
+
+class InstagramUploadResponse(BaseModel):
+    generation_id: int
+    channel: str
+    status: str
+    message: str
+
+
+class InstagramScheduleUploadRequest(BaseModel):
+    generation_id: int
+    scheduled_at: datetime
+    channel: str  # instagram_feed / instagram_story
+
+
+class InstagramScheduleStatusResponse(BaseModel):
+    schedule_id: int
+    generation_id: int
+    channel: str
+    scheduled_at: datetime
+    status: str
+    message: str

@@ -5,25 +5,18 @@ from inference_base import SDXLBaseGenerator, save_images as save_base_images
 
 def run_pipeline() -> None:
     prompt = """
-Korean tonkatsu pork cutlet, wide and flattened shape,
-thick crispy panko crust, golden brown crunchy texture,
-juicy pork meat visible inside, sliced cutlet,
-tonkatsu sauce dripping on top, glossy sauce,
-
-served on a clean white plate with shredded cabbage,
-
-close-up shot, food filling the frame,
-center composition, strong focus,
-
-premium restaurant advertisement,
-studio lighting, high contrast,
-professional food photography, ultra realistic, 4k
+Japanese tonkatsu pork cutlet,
+crispy golden panko crust,
+served on a white plate with shredded cabbage,
+close-up food photography,
+soft natural lighting,
+high quality, realistic
 """
 
     negative_prompt = """
-small pieces, round shape, croquette, fried balls,
-dessert-like, snack, unrealistic shape,
-blurry, low quality, flat lighting
+egg, mushroom, strange food, mixed dishes,
+deformed, unrealistic, weird texture,
+blurry, low quality
 """
 
     output_dir = "outputs"

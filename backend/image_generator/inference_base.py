@@ -13,27 +13,27 @@ class SDXLBaseGenerator:
         self.dtype = torch.float16 if self.device == "cuda" else torch.float32
         self.pipe = None
 
-    def load(self) -> None:
-        if self.pipe is not None:
-            return
+def load(self) -> None:
+    if self.pipe is not None:
+        return
 
-        print(f"[Base] Loading model: {self.model_id}")
-        print(f"[Base] Using device: {self.device}")
+    print(f"[Base] Loading model: {self.model_id}")
+    print(f"[Base] Using device: {self.device}")
 
-        load_kwargs = {
-            "torch_dtype": self.dtype,
-            "use_safetensors": True,
-        }
-        if self.device == "cuda":
-            load_kwargs["variant"] = "fp16"
+    load_kwargs = {
+        "torch_dtype": self.dtype,
+        "use_safetensors": True,
+    }
+    if self.device == "cuda":
+        load_kwargs["variant"] = "fp16"
 
-        self.pipe = DiffusionPipeline.from_pretrained(
-            self.model_id,
-            **load_kwargs,
-        )
+    self.pipe = DiffusionPipeline.from_pretrained(
+        self.model_id,
+        **load_kwargs,
+    )
 
-        self.pipe = self.pipe.to(self.device)
-        self.pipe.enable_attention_slicing()
+    self.pipe = self.pipe.to(self.device)
+    self.pipe.enable_attention_slicing()
 
     def generate(
         self,

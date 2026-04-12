@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, Date, ForeignKey, func
 from sqlalchemy.orm import relationship
 from db import Base
 
@@ -16,6 +16,7 @@ class User(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     generations = relationship("Generation", back_populates="user")
+    upload_schedules = relationship("UploadSchedule", back_populates="user", cascade="all, delete-orphan")
 
 
 class Generation(Base):
@@ -33,7 +34,7 @@ class Generation(Base):
 
     extra_info = Column(Text, nullable=True)
     generated_copy = Column(Text, nullable=True)
-    hashtags = Column(Text, nullable=True)  # JSON 문자열로 저장
+    hashtags = Column(Text, nullable=True)
 
     weather_summary = Column(String(255), nullable=True)
     recommended_concept = Column(String(255), nullable=True)
@@ -47,3 +48,64 @@ class Generation(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="generations")
+    generated_images = relationship(
+        "GeneratedImage",
+        back_populates="generation",
+        cascade="all, delete-orphan",
+    )
+    upload_schedules = relationship(
+        "UploadSchedule",
+        back_populates="generation",
+        cascade="all, delete-orphan",
+    )
+
+
+class GeneratedImage(Base):
+    __tablename__ = "generated_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    generation_id = Column(Integer, ForeignKey("generations.id", ondelete="CASCADE"), nullable=False)
+
+    image_url = Column(String(500), nullable=False)
+    final_image_url = Column(String(500), nullable=True)
+    prompt_used = Column(Text, nullable=True)
+    version_no = Column(Integer, nullable=False, default=1)
+    image_type = Column(String(50), nullable=False, default="generated")
+    status = Column(String(50), nullable=False, default="SUCCESS")
+
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    generation = relationship("Generation", back_populates="generated_images")
+
+
+class CalendarEvent(Base):
+    __tablename__ = "calendar_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_date = Column(Date, nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    event_type = Column(String(50), nullable=False)  # holiday / festival / local_event
+    location = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class UploadSchedule(Base):
+    __tablename__ = "upload_schedules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    generation_id = Column(Integer, ForeignKey("generations.id", ondelete="CASCADE"), nullable=False)
+
+    scheduled_at = Column(DateTime, nullable=False, index=True)
+    channel = Column(String(50), nullable=False)  # instagram_feed / instagram_story
+    status = Column(String(50), nullable=False, default="PENDING")  # PENDING / SUCCESS / FAILED / CANCELED
+
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="upload_schedules")
+    generation = relationship("Generation", back_populates="upload_schedules")

@@ -7,16 +7,19 @@ from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile,
 from sqlalchemy.orm import Session
 
 from db import get_db, SessionLocal
-from models import Generation, User
+from models import Generation, GeneratedImage, User
 from schemas import (
     GenerationCreate,
     GenerationUpdate,
     GenerationResponse,
     GenerationDetailResponse,
     GenerationListItem,
+    GeneratedImageItem,
+    RegenerateImageResponse,
 )
 from auth import get_current_user
 from ai_adapter import normalize_image_result, normalize_text_result
+from ai_clients import call_image_generator, call_text_generator
 
 
 router = APIRouter(prefix="/generations", tags=["generations"])
@@ -167,66 +170,6 @@ def recommend_concept(
     return f"{base} / {time_context} / {season_context} / 대표 메뉴 강조: {menu_name}"
 
 
-async def analyze_uploaded_image(file: UploadFile) -> str:
-    return f"업로드 이미지 분석 완료: {file.filename}"
-
-
-async def generate_image_placeholder(
-    business_category: str,
-    menu_name: str,
-    recommended_concept: str,
-) -> dict:
-    fake_url = f"https://dummy.local/generated/{business_category}_{menu_name}.png"
-    return {
-        "success": True,
-        "image_url": fake_url,
-        "prompt_used": recommended_concept,
-        "error": None,
-    }
-
-
-def generate_copy_and_hashtags(
-    business_category: str,
-    menu_name: str,
-    purpose: str,
-    location: str,
-    recommended_concept: str,
-    weather_summary: str,
-    season_context: str,
-    extra_prompt: Optional[str],
-) -> dict:
-    if purpose == "story":
-        copy = (
-            f"{location}에서 지금 어울리는 {menu_name}. "
-            f"{weather_summary}인 날에 딱 맞는 분위기로 준비했어요. "
-            f"{recommended_concept}"
-        )
-    else:
-        copy = (
-            f"{location} 매장에서 즐기는 {menu_name}. "
-            f"{season_context}에 맞춰 더 끌리게 보이도록 구성했어요. "
-            f"{recommended_concept}"
-        )
-
-    if extra_prompt:
-        copy += f" / 추가 요청 반영: {extra_prompt}"
-
-    hashtags = [
-        f"#{location.replace(' ', '')}",
-        f"#{business_category.replace(' ', '')}",
-        f"#{menu_name.replace(' ', '')}",
-        "#소상공인홍보",
-        "#인스타마케팅",
-    ]
-
-    return {
-        "success": True,
-        "copy": copy,
-        "hashtags": hashtags,
-        "error": None,
-    }
-
-
 def safe_load_hashtags(value) -> list:
     if not value:
         return []
@@ -238,6 +181,16 @@ def safe_load_hashtags(value) -> list:
         return json.loads(value)
     except Exception:
         return []
+
+
+def get_next_version_no(db: Session, generation_id: int) -> int:
+    latest = (
+        db.query(GeneratedImage)
+        .filter(GeneratedImage.generation_id == generation_id)
+        .order_by(GeneratedImage.version_no.desc())
+        .first()
+    )
+    return 1 if not latest else latest.version_no + 1
 
 
 # =========================================================
@@ -278,30 +231,26 @@ def process_generation_task(
         )
 
         original_image_url = None
+        source_image_path = None
 
         if uploaded_filename:
-            image_mode = "uploaded_and_analyzed"
-            analysis_result = f"업로드 이미지 분석 완료: {uploaded_filename}"
             original_image_url = f"https://dummy.local/uploads/{uploaded_filename}"
-
-            raw_image_result = {
-                "success": True,
-                "image_url": original_image_url,
-                "prompt_used": "",
-                "error": None,
-            }
-
-            extra_info = f"[IMAGE_ANALYSIS] {analysis_result}\n[USER_PROMPT] {extra_prompt or ''}"
+            source_image_path = uploaded_filename
+            image_mode = "uploaded_and_analyzed"
+            extra_info = f"[IMAGE_ANALYSIS] 업로드 이미지 분석 완료: {uploaded_filename}\n[USER_PROMPT] {extra_prompt or ''}"
         else:
             image_mode = "generated"
-            raw_image_result = {
-                "success": True,
-                "image_url": f"https://dummy.local/generated/{business_category}_{menu_name}.png",
-                "prompt_used": recommended_concept,
-                "error": None,
-            }
             extra_info = f"[NO_UPLOAD_IMAGE]\n[USER_PROMPT] {extra_prompt or ''}"
 
+        raw_image_result = call_image_generator(
+            business_category=business_category,
+            menu_name=menu_name,
+            location=location,
+            mood=mood,
+            recommended_concept=recommended_concept,
+            extra_prompt=extra_prompt,
+            image_path=source_image_path,
+        )
         image_result = normalize_image_result(raw_image_result)
 
         if not image_result["success"]:
@@ -312,17 +261,17 @@ def process_generation_task(
 
         generated_image_url = image_result["image_url"]
 
-        raw_text_result = generate_copy_and_hashtags(
+        raw_text_result = call_text_generator(
+            purpose=purpose,
             business_category=business_category,
             menu_name=menu_name,
-            purpose=purpose,
             location=location,
-            recommended_concept=recommended_concept,
+            mood=mood,
             weather_summary=weather_summary,
             season_context=season_context,
+            recommended_concept=recommended_concept,
             extra_prompt=extra_prompt,
         )
-
         text_result = normalize_text_result(raw_text_result)
 
         if not text_result["success"]:
@@ -333,6 +282,9 @@ def process_generation_task(
 
         generated_copy = text_result["copy"]
         hashtags = text_result["hashtags"]
+
+        # 후처리 최종 이미지 자리 (현재는 아직 오버레이 미적용이라 None)
+        final_image_url = None
 
         generation.purpose = purpose
         generation.business_category = business_category
@@ -350,6 +302,79 @@ def process_generation_task(
         generation.image_mode = image_mode
         generation.generation_status = "SUCCESS"
 
+        version_no = get_next_version_no(db, generation.id)
+
+        generated_image = GeneratedImage(
+            generation_id=generation.id,
+            image_url=generated_image_url,
+            final_image_url=final_image_url,
+            prompt_used=image_result.get("prompt_used") or recommended_concept,
+            version_no=version_no,
+            image_type="generated",
+            status="SUCCESS",
+        )
+
+        db.add(generated_image)
+        db.commit()
+
+    except Exception as e:
+        generation = db.query(Generation).filter(Generation.id == generation_id).first()
+        if generation:
+            generation.generation_status = "FAILED"
+            generation.extra_info = (generation.extra_info or "") + f"\n[ERROR] {str(e)}"
+            db.commit()
+    finally:
+        db.close()
+
+
+def process_regenerate_task(
+    generation_id: int,
+):
+    db = SessionLocal()
+
+    try:
+        generation = db.query(Generation).filter(Generation.id == generation_id).first()
+        if not generation:
+            return
+
+        generation.generation_status = "PENDING"
+        db.commit()
+
+        recommended_concept = generation.recommended_concept or "기본 추천 컨셉"
+
+        raw_image_result = call_image_generator(
+            business_category=generation.business_category or "기타",
+            menu_name=generation.menu_name or "메뉴",
+            location=generation.location or "지역",
+            mood=generation.mood,
+            recommended_concept=recommended_concept,
+            extra_prompt=None,
+            image_path=None,
+        )
+        image_result = normalize_image_result(raw_image_result)
+
+        if not image_result["success"]:
+            generation.generation_status = "FAILED"
+            generation.extra_info = (generation.extra_info or "") + "\n[ERROR] 재생성 실패"
+            db.commit()
+            return
+
+        version_no = get_next_version_no(db, generation.id)
+
+        new_image = GeneratedImage(
+            generation_id=generation.id,
+            image_url=image_result["image_url"],
+            final_image_url=None,
+            prompt_used=image_result.get("prompt_used") or recommended_concept,
+            version_no=version_no,
+            image_type="generated",
+            status="SUCCESS",
+        )
+
+        generation.generated_image_url = image_result["image_url"]
+        generation.generation_status = "SUCCESS"
+
+        db.add(new_image)
         db.commit()
 
     except Exception as e:
@@ -419,6 +444,30 @@ def get_generation(
 
     row.hashtags = safe_load_hashtags(row.hashtags)
     return row
+
+
+@router.get("/{generation_id}/images", response_model=List[GeneratedImageItem])
+def get_generation_images(
+    generation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    generation = (
+        db.query(Generation)
+        .filter(Generation.id == generation_id, Generation.user_id == current_user.id)
+        .first()
+    )
+
+    if not generation:
+        raise HTTPException(status_code=404, detail="Generation not found")
+
+    rows = (
+        db.query(GeneratedImage)
+        .filter(GeneratedImage.generation_id == generation_id)
+        .order_by(GeneratedImage.version_no.asc())
+        .all()
+    )
+    return rows
 
 
 @router.put("/{generation_id}", response_model=GenerationResponse)
@@ -520,3 +569,34 @@ async def run_generation(
         "status": "PENDING",
         "message": "처리중입니다. 잠시 후 보관함 또는 상세조회에서 결과를 확인하세요.",
     }
+
+
+@router.post("/{generation_id}/regenerate", response_model=RegenerateImageResponse)
+async def regenerate_generation_image(
+    generation_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    generation = (
+        db.query(Generation)
+        .filter(Generation.id == generation_id, Generation.user_id == current_user.id)
+        .first()
+    )
+
+    if not generation:
+        raise HTTPException(status_code=404, detail="Generation not found")
+
+    generation.generation_status = "PENDING"
+    db.commit()
+
+    background_tasks.add_task(
+        process_regenerate_task,
+        generation_id,
+    )
+
+    return RegenerateImageResponse(
+        generation_id=generation_id,
+        status="PENDING",
+        message="다른 버전 이미지를 생성중입니다. 잠시 후 이미지 목록을 확인하세요.",
+    )
