@@ -22,3 +22,8 @@ out/
 # 시스템
 .DS_Store
 Thumbs.db
+
+# 이미지 파일 제외
+*.png
+*.jpg
+*.jpeg
