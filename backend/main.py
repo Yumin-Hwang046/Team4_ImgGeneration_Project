@@ -1,1 +1,16 @@
-# 백엔드 진입점 (기술 스택 확정 후 구현 예정)
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from routes.image_router import router as image_router
+from routes.text_router import router as text_router
+
+app = FastAPI()
+
+# 정적 파일 서빙: /static → backend/assets
+app.mount(
+    "/static",
+    StaticFiles(directory="assets"),
+    name="static",
+)
+
+app.include_router(image_router)
+app.include_router(text_router)

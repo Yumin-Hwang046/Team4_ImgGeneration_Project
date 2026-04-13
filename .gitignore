@@ -1,6 +1,12 @@
 # 환경 변수
 .env
 
+# stitch_ 원본 폴더 (docs/ui/로 정리됨)
+stitch_/
+
+# 생성 이미지 결과
+backend/assets/generated/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -20,3 +26,8 @@ Thumbs.db
 
 .omc
 .claude
+
+# 이미지 파일 제외
+*.png
+*.jpg
+*.jpeg
