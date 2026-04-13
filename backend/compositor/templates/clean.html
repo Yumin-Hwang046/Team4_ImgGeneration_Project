@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: {{ width }}px; height: {{ height }}px; overflow: hidden; }
+    body { font-family: 'Pretendard', -apple-system, sans-serif; }
+
+    .bg {
+      position: absolute; inset: 0;
+      background-image: url('data:image/png;base64,{{ image_b64 }}');
+      background-size: cover;
+      background-position: center;
+    }
+
+    /* 하단 솔리드 패널 */
+    .panel {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: {{ (height * 0.34) | int }}px;
+      background: rgba(8, 8, 10, 0.93);
+    }
+
+    /* 패널 상단 얇은 포인트 라인 */
+    .panel-line {
+      position: absolute;
+      bottom: {{ (height * 0.34) | int }}px;
+      left: 0; right: 0;
+      height: 2px;
+      background: #ffffff;
+      opacity: 0.06;
+    }
+
+    .content {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: {{ (padding * 0.85) | int }}px {{ padding }}px {{ bottom_padding }}px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* 상단 메타 줄 */
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: {{ (detail_size * 0.55) | int }}px;
+      margin-bottom: {{ (headline_size * 0.18) | int }}px;
+    }
+
+    .meta-line {
+      width: {{ (detail_size * 1.6) | int }}px;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.28);
+    }
+
+    .meta-label {
+      font-size: {{ (detail_size * 0.80) | int }}px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.36);
+      letter-spacing: 0.20em;
+      text-transform: uppercase;
+    }
+
+    .headline {
+      font-size: {{ headline_size }}px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.12;
+      letter-spacing: -0.035em;
+      margin-bottom: {{ (tagline_size * 0.48) | int }}px;
+      word-break: keep-all;
+    }
+
+    .tagline {
+      font-size: {{ tagline_size }}px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.55);
+      letter-spacing: -0.01em;
+      line-height: 1.52;
+      margin-bottom: {{ (detail_size * 0.65) | int }}px;
+      word-break: keep-all;
+    }
+
+    /* 디테일 — 가로 태그 */
+    .details {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: {{ (detail_size * 0.32) | int }}px {{ (detail_size * 0.55) | int }}px;
+    }
+
+    .details li {
+      font-size: {{ (detail_size * 0.80) | int }}px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.38);
+      letter-spacing: 0.04em;
+      padding: {{ (detail_size * 0.16) | int }}px {{ (detail_size * 0.52) | int }}px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="panel"></div>
+  <div class="panel-line"></div>
+  <div class="content">
+    <div class="meta-row">
+      <div class="meta-line"></div>
+      <div class="meta-label">Product</div>
+    </div>
+    <div class="headline">{{ headline }}</div>
+    {% if tagline %}<div class="tagline">{{ tagline }}</div>{% endif %}
+    {% if details %}
+    <ul class="details">
+      {% for d in details %}<li>{{ d }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</body>
+</html>

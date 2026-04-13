@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: {{ width }}px; height: {{ height }}px; overflow: hidden; }
+
+    .bg {
+      position: absolute; inset: 0;
+      background-image: url('data:image/png;base64,{{ image_b64 }}');
+      background-size: cover;
+      background-position: center;
+    }
+
+    .scrim-top {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: {{ (height * 0.52) | int }}px;
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.78) 0%,
+        rgba(0, 0, 0, 0.28) 68%,
+        transparent 100%
+      );
+    }
+
+    .scrim-bottom {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: {{ (height * 0.28) | int }}px;
+      background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%);
+    }
+
+    /* 상단 — 헤드라인 */
+    .top-content {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: {{ bottom_padding }}px {{ padding }}px 0;
+    }
+
+    .accent-bar {
+      width: {{ (detail_size * 2.8) | int }}px;
+      height: {{ (detail_size * 0.30) | int }}px;
+      background: #ff2d55;
+      margin-bottom: {{ (headline_size * 0.18) | int }}px;
+    }
+
+    .headline {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: {{ (headline_size * 1.40) | int }}px;
+      font-weight: 400; /* Black Han Sans is inherently ultra-bold */
+      color: #ffffff;
+      line-height: 1.04;
+      letter-spacing: -0.02em;
+      word-break: keep-all;
+      text-shadow: 0 4px 28px rgba(0, 0, 0, 0.40);
+    }
+
+    /* 하단 — 서브카피 + 디테일 */
+    .bottom-content {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 0 {{ padding }}px {{ bottom_padding }}px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: {{ (padding * 0.5) | int }}px;
+    }
+
+    .left-block { flex: 1; min-width: 0; }
+
+    .tag {
+      display: inline-block;
+      font-family: 'Pretendard', sans-serif;
+      font-size: {{ (detail_size * 0.80) | int }}px;
+      font-weight: 800;
+      color: #ff2d55;
+      background: #ffffff;
+      padding: {{ (detail_size * 0.20) | int }}px {{ (detail_size * 0.60) | int }}px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: {{ (tagline_size * 0.40) | int }}px;
+    }
+
+    .tagline {
+      font-family: 'Pretendard', sans-serif;
+      font-size: {{ tagline_size }}px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.88);
+      line-height: 1.44;
+      letter-spacing: -0.01em;
+      word-break: keep-all;
+    }
+
+    .details {
+      list-style: none;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .details li {
+      font-family: 'Pretendard', sans-serif;
+      font-size: {{ detail_size }}px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.55);
+      margin-bottom: {{ (detail_size * 0.22) | int }}px;
+      letter-spacing: 0.01em;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="scrim-top"></div>
+  <div class="scrim-bottom"></div>
+
+  <div class="top-content">
+    <div class="accent-bar"></div>
+    <div class="headline">{{ headline }}</div>
+  </div>
+
+  <div class="bottom-content">
+    <div class="left-block">
+      <div class="tag">Pick</div>
+      {% if tagline %}<div class="tagline">{{ tagline }}</div>{% endif %}
+    </div>
+    {% if details %}
+    <ul class="details">
+      {% for d in details %}<li>{{ d }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</body>
+</html>
