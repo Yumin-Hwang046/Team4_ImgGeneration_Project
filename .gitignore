@@ -17,6 +17,3 @@ out/
 # 시스템
 .DS_Store
 Thumbs.db
-
-.omc
-.claude
