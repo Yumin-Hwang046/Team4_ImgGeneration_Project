@@ -10,14 +10,21 @@ AI 연동 인터페이스 파일
 전체 백엔드는 이 반환 형식을 기준으로 동작합니다.
 """
 
-
-from typing import Dict
+from typing import Dict, Optional
 
 
 # =========================
 # IMAGE GENERATOR
 # =========================
-def call_image_generator(prompt: str) -> Dict:
+def call_image_generator(
+    business_category: str,
+    menu_name: str,
+    location: str,
+    mood: Optional[str],
+    recommended_concept: str,
+    extra_prompt: Optional[str] = None,
+    image_path: Optional[str] = None,
+) -> Dict:
     """
     이미지 생성 API 연결 함수
 
@@ -25,8 +32,8 @@ def call_image_generator(prompt: str) -> Dict:
     실제 이미지 생성 모델 API를 여기서 호출하면 됩니다.
 
     예:
-    - Stable Diffusion
-    - SDXL
+    - Stable Diffusion / SDXL
+    - IP-Adapter (case4_ip_adapter.py)
     - 자체 inference 서버
 
     반환 형식 (반드시 유지):
@@ -41,8 +48,8 @@ def call_image_generator(prompt: str) -> Dict:
     # ===== 현재는 mock =====
     return {
         "success": True,
-        "image_url": "https://example.com/mock-image.jpg",
-        "prompt_used": prompt,
+        "image_url": "https://picsum.photos/1080/1080",
+        "prompt_used": recommended_concept,
         "error": None,
     }
 
@@ -50,7 +57,17 @@ def call_image_generator(prompt: str) -> Dict:
 # =========================
 # TEXT GENERATOR
 # =========================
-def call_text_generator(prompt: str) -> Dict:
+def call_text_generator(
+    purpose: str,
+    business_category: str,
+    menu_name: str,
+    location: str,
+    mood: Optional[str],
+    weather_summary: str,
+    season_context: str,
+    recommended_concept: str,
+    extra_prompt: Optional[str] = None,
+) -> Dict:
     """
     문구 생성 API 연결 함수
 
@@ -58,9 +75,9 @@ def call_text_generator(prompt: str) -> Dict:
     실제 텍스트 생성 모델 API를 여기서 호출하면 됩니다.
 
     예:
-    - GPT
+    - GPT-4o-mini
     - 자체 LLM
-    - 프롬프트 엔진
+    - text_generator/generator.py 직접 호출
 
     반환 형식 (반드시 유지):
     {
@@ -74,7 +91,7 @@ def call_text_generator(prompt: str) -> Dict:
     # ===== 현재는 mock =====
     return {
         "success": True,
-        "copy": "오늘의 추천 메뉴! 지금 방문해보세요.",
+        "copy": f"{menu_name}의 특별한 맛을 지금 경험해보세요.",
         "hashtags": ["#맛집", "#추천", "#오늘의메뉴"],
         "error": None,
     }
