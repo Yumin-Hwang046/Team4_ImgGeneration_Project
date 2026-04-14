@@ -1,23 +1,34 @@
-# Core
-numpy
-fastapi
-uvicorn
-pillow
-python-multipart
+# Web framework
+fastapi==0.115.0
+uvicorn==0.30.0
+python-multipart==0.0.9
 
-# AI / ML
-openai
-torch>=2.4
-torchvision>=0.19
-transformers==4.44.2
-optimum>=1.21
-diffusers==0.30.2
-accelerate==0.33.0
-rembg>=2.0.0
+# Data validation
+pydantic==2.9.0
 
-# Model Optimization
-onnx>=1.15
-onnxruntime>=1.17
-onnxruntime-gpu; platform_system == "Linux"
-nvidia-tensorrt; platform_system == "Linux"
-pycuda; platform_system == "Linux"
+# Database
+sqlalchemy==2.0.35
+pymysql==1.1.1
+cryptography==43.0.3
+
+# Auth / Security
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+bcrypt==4.2.0
+
+# AI / OpenAI
+openai==1.51.0
+
+# HTTP
+requests==2.32.3
+httpx==0.27.2
+
+# Utilities
+python-dotenv==1.0.1
+email-validator==2.2.0
+Pillow==10.4.0
+
+# ============================================================
+# GPU 환경(VM)에서만 설치 필요한 패키지
+# pip install torch diffusers transformers accelerate Pillow
+# ============================================================
