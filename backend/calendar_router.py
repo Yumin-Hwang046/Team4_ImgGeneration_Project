@@ -2,14 +2,14 @@ from calendar import monthrange
 from datetime import datetime, date
 from typing import List
 
+import requests
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-import requests
 
-from db import get_db
-from models import CalendarEvent, Generation, UploadSchedule, User
-from schemas import (
+from backend.db import get_db
+from backend.models import CalendarEvent, Generation, UploadSchedule, User
+from backend.schemas import (
     CalendarMonthResponse,
     CalendarMonthDayItem,
     CalendarDayResponse,
@@ -21,8 +21,7 @@ from schemas import (
     UploadScheduleCreate,
     UploadScheduleItem,
 )
-from auth import get_current_user
-
+from backend.auth import get_current_user
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
@@ -57,24 +56,20 @@ def get_seasonal_weather_fallback(target_date: date) -> str:
 
     if month in [3, 4, 5]:
         return "봄 예상 날씨, 온화함 / 야외활동 적합"
-    elif month in [6, 7, 8]:
+    if month in [6, 7, 8]:
         return "여름 예상 날씨, 더움 / 시원한 실내 수요 증가"
-    elif month in [9, 10, 11]:
+    if month in [9, 10, 11]:
         return "가을 예상 날씨, 선선함 / 감성 마케팅 적합"
-    else:
-        return "겨울 예상 날씨, 추움 / 따뜻한 실내 분위기 강조"
+    return "겨울 예상 날씨, 추움 / 따뜻한 실내 분위기 강조"
 
 
 def is_forecast_range_available(target_date: date) -> bool:
     today = date.today()
     diff_days = (target_date - today).days
-
-    # Open-Meteo Forecast API는 최대 16일 예보 범위
     return 0 <= diff_days <= 16
 
 
 def get_weather_summary_by_date(location: str, target_date: date) -> str:
-    # 먼 미래 날짜면 계절 fallback 사용
     if not is_forecast_range_available(target_date):
         return get_seasonal_weather_fallback(target_date)
 
@@ -149,31 +144,26 @@ def build_recommendation(
         recommended_channel = "instagram_story"
         recommended_purpose = "실내 방문 유도"
         recommended_concept = "비 오는 날 감성 / 따뜻한 실내 분위기 강조"
-
     elif "맑음" in weather_summary:
         recommended_time = "오후 12시"
         recommended_channel = "instagram_feed"
         recommended_purpose = "점심/오후 유입 유도"
         recommended_concept = "맑은 날 감성 / 밝고 선명한 비주얼 강조"
-
     elif "봄 예상 날씨" in weather_summary:
         recommended_time = "오후 2시"
         recommended_channel = "instagram_feed"
         recommended_purpose = "야외활동 전후 방문 유도"
         recommended_concept = "봄 감성 / 산뜻한 색감 / 시즌 한정 메뉴 강조"
-
     elif "여름 예상 날씨" in weather_summary:
         recommended_time = "오후 1시"
         recommended_channel = "instagram_story"
         recommended_purpose = "더위 회피 수요 유입"
         recommended_concept = "시원한 분위기 / 청량한 비주얼 / 여름 특화 메뉴 강조"
-
     elif "가을 예상 날씨" in weather_summary:
         recommended_time = "오후 4시"
         recommended_channel = "instagram_feed"
         recommended_purpose = "감성 소비 유도"
         recommended_concept = "가을 감성 / 따뜻한 무드 / 저녁 방문 유도"
-
     elif "겨울 예상 날씨" in weather_summary:
         recommended_time = "오후 5시"
         recommended_channel = "instagram_feed"
@@ -276,11 +266,11 @@ def get_calendar_day(
 ):
     try:
         target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-    except ValueError:
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="date 형식이 올바르지 않습니다. 예: 2026-05-01",
-        )
+        ) from exc
 
     weather_summary = get_weather_summary_by_date(location, target_date)
 

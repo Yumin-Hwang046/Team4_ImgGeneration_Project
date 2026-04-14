@@ -5,10 +5,15 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
 from sqlalchemy.orm import Session
 
-from db import get_db
-from models import User
-from schemas import UserResponse, Token
-from security import hash_password, verify_password, create_access_token, decode_access_token
+from backend.db import get_db
+from backend.models import User
+from backend.schemas import UserResponse, Token
+from backend.security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    decode_access_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -48,24 +53,24 @@ def signup(
         Form(
             ...,
             title="아이디 (E-mail)",
-            description="회원가입에 사용할 이메일을 입력하세요."
-        )
+            description="회원가입에 사용할 이메일을 입력하세요.",
+        ),
     ],
     password: Annotated[
         str,
         Form(
             ...,
             title="비밀번호",
-            description="회원가입 비밀번호를 입력하세요."
-        )
+            description="회원가입 비밀번호를 입력하세요.",
+        ),
     ],
     name: Annotated[
         str,
         Form(
             ...,
             title="이름",
-            description="사용자 이름을 입력하세요."
-        )
+            description="사용자 이름을 입력하세요.",
+        ),
     ],
     db: Session = Depends(get_db),
 ):
@@ -73,7 +78,7 @@ def signup(
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미 사용 중인 이메일입니다."
+            detail="이미 사용 중인 이메일입니다.",
         )
 
     new_user = User(
@@ -102,13 +107,13 @@ def login(
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="이메일 또는 비밀번호가 올바르지 않습니다."
+            detail="이메일 또는 비밀번호가 올바르지 않습니다.",
         )
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {
         "access_token": access_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
     }
 
 
