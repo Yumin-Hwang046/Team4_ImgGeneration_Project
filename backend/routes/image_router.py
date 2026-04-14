@@ -9,6 +9,7 @@ from image_generator.case1_sdxl import generate_image_sdxl_quality
 from image_generator.case2_sdxl import generate_image_case2
 from image_generator.case3_controlnet import generate_image_case3_controlnet
 from image_generator.case4_ip_adapter import generate_image_case4_ip_adapter
+from image_generator.case5_inpaint_ip_adapter import generate_image_case5_inpaint_ip_adapter
 from observability import log_langfuse_trace, log_wandb
 
 router = APIRouter(prefix="/image", tags=["image"])
@@ -44,6 +45,19 @@ class Case4Request(BaseModel):
     format_type: str = "피드"
     ip_adapter_scale: float = 0.7
     strength: float = 0.6
+    output_name: Optional[str] = None
+    output_subdir: Optional[str] = None
+
+
+class Case5Request(BaseModel):
+    user_image_path: str
+    reference_image_path: str
+    mask_image_path: str
+    user_prompt: str
+    format_type: str = "피드"
+    ip_adapter_scale: float = 0.6
+    strength: float = 0.35
+    mask_invert: bool = False
     output_name: Optional[str] = None
     output_subdir: Optional[str] = None
 
@@ -142,5 +156,73 @@ def case4(req: Case4Request):
             output={"error_type": type(e).__name__, "error_message": str(e)},
             metadata={"duration_sec": duration},
             tags=["router", "case4", "error"],
+        )
+        raise
+
+
+@router.post("/case5")
+def case5(req: Case5Request):
+    request_id = uuid4().hex
+    start_time = time.time()
+    inputs = {
+        "request_id": request_id,
+        "case": "case5",
+        "user_image_path": req.user_image_path,
+        "reference_image_path": req.reference_image_path,
+        "mask_image_path": req.mask_image_path,
+        "user_prompt": req.user_prompt,
+        "format_type": req.format_type,
+        "ip_adapter_scale": req.ip_adapter_scale,
+        "strength": req.strength,
+        "mask_invert": req.mask_invert,
+        "output_name": req.output_name,
+        "output_subdir": req.output_subdir,
+    }
+
+    try:
+        result = generate_image_case5_inpaint_ip_adapter(
+            user_image_path=req.user_image_path,
+            reference_image_path=req.reference_image_path,
+            mask_image_path=req.mask_image_path,
+            user_prompt=req.user_prompt,
+            format_type=req.format_type,
+            ip_adapter_scale=req.ip_adapter_scale,
+            strength=req.strength,
+            mask_invert=req.mask_invert,
+            output_name=req.output_name,
+            output_subdir=req.output_subdir,
+            request_id=request_id,
+        )
+        duration = time.time() - start_time
+        log_payload = {
+            **inputs,
+            "duration_sec": duration,
+            "output_path": result.get("path"),
+            "output_url": result.get("url"),
+        }
+        log_wandb("case5.router", log_payload)
+        log_langfuse_trace(
+            name="case5.router",
+            input=inputs,
+            output=result,
+            metadata={"duration_sec": duration},
+            tags=["router", "case5"],
+        )
+        return result
+    except Exception as e:
+        duration = time.time() - start_time
+        err_payload = {
+            **inputs,
+            "duration_sec": duration,
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+        }
+        log_wandb("case5.router.error", err_payload)
+        log_langfuse_trace(
+            name="case5.router.error",
+            input=inputs,
+            output={"error_type": type(e).__name__, "error_message": str(e)},
+            metadata={"duration_sec": duration},
+            tags=["router", "case5", "error"],
         )
         raise
