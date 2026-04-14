@@ -1,0 +1,79 @@
+import os
+from typing import Any, Optional
+
+_wandb = None
+_wandb_inited = False
+_langfuse = None
+
+
+def _has_langfuse_env() -> bool:
+    return bool(os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY"))
+
+
+def get_wandb():
+    global _wandb, _wandb_inited
+    if _wandb is None:
+        try:
+            import wandb as _wb
+            _wandb = _wb
+        except Exception:
+            _wandb = False
+
+    if _wandb is False:
+        return None
+    if not os.getenv("WANDB_API_KEY"):
+        return None
+
+    if not _wandb_inited:
+        _wandb.init(
+            project=os.getenv("WANDB_PROJECT", "imggen"),
+            entity=os.getenv("WANDB_ENTITY") or None,
+        )
+        _wandb_inited = True
+    return _wandb
+
+
+def get_langfuse():
+    global _langfuse
+    if _langfuse is None:
+        try:
+            from langfuse import Langfuse
+            _langfuse = Langfuse()
+        except Exception:
+            _langfuse = False
+
+    if _langfuse is False:
+        return None
+    if not _has_langfuse_env():
+        return None
+    return _langfuse
+
+
+def log_wandb(event: str, data: dict[str, Any]) -> None:
+    wb = get_wandb()
+    if not wb:
+        return
+    payload = {"event": event, **data}
+    wb.log(payload)
+
+
+def log_langfuse_trace(
+    name: str,
+    input: dict[str, Any],
+    output: Optional[dict[str, Any]] = None,
+    metadata: Optional[dict[str, Any]] = None,
+    tags: Optional[list[str]] = None,
+) -> None:
+    lf = get_langfuse()
+    if not lf:
+        return
+    try:
+        lf.trace(
+            name=name,
+            input=input,
+            output=output,
+            metadata=metadata,
+            tags=tags,
+        )
+    except Exception:
+        return

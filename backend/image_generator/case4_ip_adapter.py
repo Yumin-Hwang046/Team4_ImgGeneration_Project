@@ -6,6 +6,7 @@ import torch
 from PIL import Image
 from diffusers import AutoPipelineForImage2Image
 
+from observability import log_langfuse_trace, log_wandb
 # SDXL Base 모델
 SDXL_BASE_ID = "stabilityai/stable-diffusion-xl-base-1.0"
 
@@ -42,6 +43,7 @@ def generate_image_case4_ip_adapter(
     output_name: Optional[str] = None,
     output_subdir: Optional[str] = None,
     seed: Optional[int] = None,
+    request_id: Optional[str] = None,
 ) -> dict:
     """
     Case4: 사용자 이미지(내용) + 레퍼런스 이미지(스타일) 동시 사용
@@ -53,6 +55,7 @@ def generate_image_case4_ip_adapter(
     if not os.path.exists(reference_image_path):
         raise FileNotFoundError(f"레퍼런스 이미지가 없습니다: {reference_image_path}")
 
+    start_time = time.time()
     width, height = get_sdxl_size(format_type)
 
     init_image = Image.open(user_image_path).convert("RGB").resize((width, height), Image.BICUBIC)
@@ -97,12 +100,54 @@ def generate_image_case4_ip_adapter(
     out_path = os.path.join(out_dir, filename)
     image.save(out_path)
 
-    return {
+    result = {
         "path": out_path,
         "url": f"{PUBLIC_URL_PREFIX}/{filename}",
         "user_image_path": user_image_path,
         "reference_image_path": reference_image_path,
     }
+
+    duration = time.time() - start_time
+    log_payload = {
+        "request_id": request_id,
+        "case": "case4",
+        "format_type": format_type,
+        "width": width,
+        "height": height,
+        "user_prompt": user_prompt,
+        "final_prompt": final_prompt,
+        "negative_prompt": NEGATIVE_PROMPT,
+        "user_image_path": user_image_path,
+        "reference_image_path": reference_image_path,
+        "ip_adapter_scale": ip_adapter_scale,
+        "strength": strength,
+        "steps": steps,
+        "guidance": guidance,
+        "seed": seed,
+        "model_id": SDXL_BASE_ID,
+        "ip_adapter_repo": IP_ADAPTER_REPO,
+        "ip_adapter_subfolder": IP_ADAPTER_SUBFOLDER,
+        "ip_adapter_weight": IP_ADAPTER_WEIGHT,
+        "output_path": out_path,
+        "output_url": result["url"],
+        "duration_sec": duration,
+    }
+    log_wandb("case4.pipeline", log_payload)
+    log_langfuse_trace(
+        name="case4.pipeline",
+        input={
+            "request_id": request_id,
+            "user_prompt": user_prompt,
+            "format_type": format_type,
+            "user_image_path": user_image_path,
+            "reference_image_path": reference_image_path,
+        },
+        output=result,
+        metadata=log_payload,
+        tags=["pipeline", "case4"],
+    )
+
+    return result
 
 
 def build_case4_prompt(user_prompt: str) -> str:
