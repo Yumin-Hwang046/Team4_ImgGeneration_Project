@@ -1,12 +1,20 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { getStoredLocation, getStoredCategory, getStoredStoreName } from '@/lib/auth'
 
 export default function AnalysisPage() {
   const router = useRouter()
+  const [location, setLocation] = useState('')
+  const [category, setCategory] = useState('')
+  const [storeName, setStoreName] = useState('')
 
   useEffect(() => {
+    setLocation(getStoredLocation())
+    setCategory(getStoredCategory())
+    setStoreName(getStoredStoreName())
+
     const timer = setTimeout(() => router.push('/onboarding/report'), 4000)
     return () => clearTimeout(timer)
   }, [router])
@@ -22,7 +30,7 @@ export default function AnalysisPage() {
             더 디지털 큐레이터 AI 시스템
           </span>
           <h1 className="font-headline text-4xl md:text-5xl font-bold tracking-tight text-on-surface leading-[1.2]">
-            반갑습니다, 사장님!<br />
+            반갑습니다{storeName ? `, ${storeName}` : ''}!<br />
             <span className="text-primary-container">분석을 시작합니다.</span>
           </h1>
         </div>
@@ -33,15 +41,19 @@ export default function AnalysisPage() {
               <span className="text-on-secondary-container opacity-60 text-sm">선택한 지역</span>
               <span className="material-symbols-outlined text-primary-container">location_on</span>
             </div>
-            <div className="text-3xl font-headline font-bold text-on-surface">성수동</div>
+            <div className="text-3xl font-headline font-bold text-on-surface">
+              {location || '—'}
+            </div>
             <div className="h-1 w-12 bg-primary-container/30 rounded-full" />
           </div>
           <div className="bg-surface-container-lowest rounded-xl p-8 shadow-sm flex flex-col gap-4 border border-outline-variant/30">
             <div className="flex items-center justify-between">
               <span className="text-on-secondary-container opacity-60 text-sm">업종</span>
-              <span className="material-symbols-outlined text-primary-container">coffee</span>
+              <span className="material-symbols-outlined text-primary-container">storefront</span>
             </div>
-            <div className="text-3xl font-headline font-bold text-on-surface">카페</div>
+            <div className="text-3xl font-headline font-bold text-on-surface">
+              {category || '—'}
+            </div>
             <div className="h-1 w-12 bg-primary-container/30 rounded-full" />
           </div>
         </div>
@@ -62,7 +74,7 @@ export default function AnalysisPage() {
 
           <div className="text-center space-y-4">
             <p className="text-lg font-medium text-secondary italic">
-              AI가 성수동 최신 상권 트렌드를 분석 중입니다...
+              AI가 {location || '해당 지역'} 최신 상권 트렌드를 분석 중입니다...
             </p>
             <div className="flex gap-2 justify-center">
               <div className="w-1.5 h-1.5 rounded-full bg-primary-container animate-bounce [animation-delay:-0.3s]" />

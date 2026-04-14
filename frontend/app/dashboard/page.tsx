@@ -1,14 +1,73 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import SideBar from '@/components/SideBar'
+import { api, GenerationListItem } from '@/lib/api'
 
-const recentContents = [
-  { id: 1, title: '여름 시즌 채소 프로모션', time: 'Created 2h ago', img: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=500&fit=crop&auto=format&q=80' },
-  { id: 2, title: '오후의 휴식 커피 원두', time: 'Created Yesterday', img: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=500&fit=crop&auto=format&q=80' },
-  { id: 3, title: '봄맞이 인테리어 소품', time: 'Created 3d ago', img: 'https://images.unsplash.com/photo-1490750967868-88df5691cc07?w=400&h=500&fit=crop&auto=format&q=80' },
-  { id: 4, title: '매일 아침 갓 구운 빵', time: 'Created 1w ago', img: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=500&fit=crop&auto=format&q=80' },
-]
+function validImgSrc(url: string | null): string | null {
+  if (url && (url.startsWith('http://') || url.startsWith('https://'))) return url
+  return null
+}
+
+function formatRelativeDate(dateStr: string): string {
+  const now = new Date()
+  const date = new Date(dateStr)
+  const diffMs = now.getTime() - date.getTime()
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffHours < 1) return '방금 전'
+  if (diffHours < 24) return `${diffHours}시간 전`
+  if (diffDays === 1) return '어제'
+  if (diffDays < 7) return `${diffDays}일 전`
+  return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+}
+
+function RecentCard({ item }: { item: GenerationListItem }) {
+  const src = validImgSrc(item.generated_image_url)
+  const title = item.menu_name ?? item.business_category ?? '콘텐츠'
+
+  return (
+    <div className="group cursor-pointer">
+      <div className="aspect-[4/5] rounded-2xl overflow-hidden mb-4 relative bg-stone-200">
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            {item.generation_status === 'PENDING' ? (
+              <span className="material-symbols-outlined text-stone-400 text-3xl animate-spin">progress_activity</span>
+            ) : (
+              <span className="material-symbols-outlined text-stone-300 text-3xl">image</span>
+            )}
+          </div>
+        )}
+        <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
+      </div>
+      <p className="text-sm font-medium text-on-surface/90 truncate">{title}</p>
+      <p className="text-[10px] text-on-surface-variant/50 mt-1.5 uppercase tracking-wider">
+        {formatRelativeDate(item.created_at)}
+      </p>
+    </div>
+  )
+}
 
 export default function DashboardPage() {
+  const [recentItems, setRecentItems] = useState<GenerationListItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.generations.list()
+      .then(list => setRecentItems(list.slice(0, 4)))
+      .catch(() => setRecentItems([]))
+      .finally(() => setLoading(false))
+  }, [])
+
   return (
     <div className="flex min-h-screen bg-surface text-on-surface">
       <SideBar />
@@ -89,25 +148,23 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {recentContents.map((item) => (
-              <div key={item.id} className="group cursor-pointer">
-                <div className="aspect-[4/5] rounded-2xl overflow-hidden mb-4 relative bg-stone-200">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.img}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
-                </div>
-                <p className="text-sm font-medium text-on-surface/90 truncate">{item.title}</p>
-                <p className="text-[10px] text-on-surface-variant/50 mt-1.5 uppercase tracking-wider">
-                  {item.time}
-                </p>
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <span className="material-symbols-outlined text-primary text-3xl animate-spin">progress_activity</span>
+            </div>
+          ) : recentItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4 text-on-surface-variant/40">
+              <span className="material-symbols-outlined text-5xl">image_search</span>
+              <p className="text-sm font-medium">아직 생성된 콘텐츠가 없습니다</p>
+              <Link href="/studio" className="mt-2 px-6 py-3 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-opacity">
+                첫 콘텐츠 만들기
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {recentItems.map(item => <RecentCard key={item.id} item={item} />)}
+            </div>
+          )}
         </section>
       </main>
     </div>

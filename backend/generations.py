@@ -503,6 +503,25 @@ def update_generation(
     return row
 
 
+@router.delete("/{generation_id}", response_model=dict)
+def delete_generation(
+    generation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    row = (
+        db.query(Generation)
+        .filter(Generation.id == generation_id, Generation.user_id == current_user.id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Generation not found")
+
+    db.delete(row)
+    db.commit()
+    return {"message": "삭제되었습니다."}
+
+
 # =========================================================
 # RUN API
 # =========================================================

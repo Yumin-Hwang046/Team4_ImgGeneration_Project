@@ -1,18 +1,45 @@
-import Link from 'next/link'
-import InstagramConnect from '@/components/InstagramConnect'
+'use client'
 
-const ERROR_MESSAGES: Record<string, string> = {
+import { Suspense, useState } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import InstagramConnect from '@/components/InstagramConnect'
+import { api } from '@/lib/api'
+import { setToken } from '@/lib/auth'
+
+const PARAM_ERROR_MESSAGES: Record<string, string> = {
   instagram_denied: '인스타그램 로그인을 취소했습니다.',
   missing_code: '인증 코드를 받지 못했습니다. 다시 시도해주세요.',
   auth_failed: '인증에 실패했습니다. 잠시 후 다시 시도해주세요.',
 }
 
-interface LoginPageProps {
-  searchParams: { error?: string; reason?: string }
-}
+function LoginForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-export default function LoginPage({ searchParams }: LoginPageProps) {
-  const errorMsg = searchParams.error ? ERROR_MESSAGES[searchParams.error] : null
+  const paramError = searchParams.get('error')
+    ? PARAM_ERROR_MESSAGES[searchParams.get('error')!] ?? null
+    : null
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    try {
+      const { access_token } = await api.auth.login(email, password)
+      setToken(access_token)
+      router.push('/dashboard')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col items-center justify-center p-6">
@@ -27,20 +54,23 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
             </p>
           </div>
 
-          {errorMsg && (
+          {(paramError || error) && (
             <div className="mb-6 px-4 py-3 rounded-lg bg-error/10 border border-error/20 text-error text-sm text-center">
-              {errorMsg}
+              {paramError ?? error}
             </div>
           )}
 
-          <form className="space-y-6" action="/dashboard">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider mb-2">
-                아이디
+                이메일
               </label>
               <input
                 type="email"
-                placeholder="아이디"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="이메일을 입력하세요"
+                required
                 className="w-full px-5 py-4 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary-container text-on-surface placeholder:text-outline/40 transition-all duration-200 outline-none"
               />
             </div>
@@ -50,15 +80,19 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               </label>
               <input
                 type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
+                required
                 className="w-full px-5 py-4 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary-container text-on-surface placeholder:text-outline/40 transition-all duration-200 outline-none"
               />
             </div>
             <button
               type="submit"
-              className="w-full py-4 px-6 rounded-xl text-white font-semibold tracking-wide cta-gradient hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md font-headline"
+              disabled={loading}
+              className="w-full py-4 px-6 rounded-xl text-white font-semibold tracking-wide cta-gradient hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-md font-headline disabled:opacity-60"
             >
-              로그인
+              {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
 
@@ -99,5 +133,17 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
