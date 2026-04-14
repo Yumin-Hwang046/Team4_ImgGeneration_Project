@@ -1,4 +1,8 @@
+'use client'
+
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { getStoredAdmCd, getStoredLocation, getStoredDongName } from '@/lib/auth'
 
 const personas = [
   {
@@ -35,7 +39,70 @@ const personas = [
   },
 ]
 
+interface DemoRank {
+  rank: number
+  demographic: string
+  pct: number
+  count: number
+}
+
+interface StoreRank {
+  rank: number
+  name: string
+  count: number
+  demographic: string
+  pct: number
+}
+
+interface CommercialData {
+  demographics: {
+    top3: DemoRank[]
+    maleRatio: number
+    femaleRatio: number
+  } | null
+  storeTop3: StoreRank[] | null
+  total: number
+  recommendedPersonas: number[]
+  strategyText: string | null
+  keyInsight: string | null
+}
+
+const RANK_COLORS = ['bg-white', 'bg-white/60', 'bg-white/30']
+
 export default function ReportPage() {
+  const [data, setData] = useState<CommercialData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const location = getStoredLocation()
+
+  useEffect(() => {
+    const admCd = getStoredAdmCd()
+    const dong = getStoredDongName()
+    if (!admCd && !dong) { setLoading(false); return }
+
+    const params = new URLSearchParams()
+    if (admCd) params.set('admCd', admCd)
+    if (dong) params.set('dong', dong)
+
+    fetch(`/api/commercial?${params}`)
+      .then(res => res.json())
+      .then((json: CommercialData) => setData(json))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  // 서울 API 데이터 우선, 없으면 업종 기반 추정
+  const displayTop3: DemoRank[] = data?.demographics?.top3 ??
+    (data?.storeTop3?.map(s => ({
+      rank: s.rank,
+      demographic: s.demographic,
+      pct: s.pct,
+      count: s.count,
+    })) ?? [])
+
+  const top1 = displayTop3[0]
+  const hasData = displayTop3.length > 0
+  const isRealData = !!data?.demographics
+
   return (
     <div className="bg-surface text-on-surface pb-20">
       <nav className="bg-surface flex justify-between items-center px-8 py-6 w-full max-w-screen-2xl mx-auto">
@@ -52,6 +119,12 @@ export default function ReportPage() {
           <h1 className="text-5xl font-bold tracking-tight text-on-surface max-w-3xl leading-[1.1] font-headline">
             데이터로 읽는<br />로컬 인구통계 인사이트
           </h1>
+          {location && (
+            <p className="mt-4 text-sm text-on-surface-variant flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-primary text-base">location_on</span>
+              {location}
+            </p>
+          )}
         </header>
 
         {/* Demographics */}
@@ -59,47 +132,120 @@ export default function ReportPage() {
           <div className="md:col-span-7 bg-surface-container-low rounded-xl p-10 flex flex-col justify-between border border-outline-variant/10">
             <div>
               <h3 className="text-2xl font-bold mb-8 font-headline">고객 인구통계 분석</h3>
-              <div className="space-y-6">
-                <p className="text-4xl font-medium tracking-tight leading-snug">
-                  20-30대 여성이 <br />
-                  <span className="text-primary underline underline-offset-8">가장 활발한 지역</span>입니다.
-                </p>
-                <div className="flex gap-3 mt-8">
-                  <span className="px-6 py-3 bg-white rounded-full text-on-surface shadow-sm border border-outline-variant/10 text-sm">
-                    주말 유동인구 최대
-                  </span>
-                  <span className="px-6 py-3 bg-white rounded-full text-on-surface shadow-sm border border-outline-variant/10 text-sm">
-                    여성 비율 62%
-                  </span>
+
+              {loading && (
+                <div className="space-y-4">
+                  <div className="h-10 bg-surface-container rounded-lg animate-pulse w-3/4" />
+                  <div className="h-6 bg-surface-container rounded-lg animate-pulse w-1/2" />
                 </div>
-              </div>
+              )}
+
+              {!loading && hasData && (
+                <div className="space-y-6">
+                  <p className="text-4xl font-medium tracking-tight leading-snug">
+                    {top1.demographic}이<br />
+                    <span className="text-primary underline underline-offset-8">가장 활발한 지역</span>입니다.
+                  </p>
+                  <div className="flex flex-wrap gap-3 mt-8">
+                    {isRealData && data?.demographics && (
+                      <>
+                        <span className="px-5 py-2.5 bg-white rounded-full text-on-surface shadow-sm border border-outline-variant/10 text-sm">
+                          여성 {data.demographics.femaleRatio}%
+                        </span>
+                        <span className="px-5 py-2.5 bg-white rounded-full text-on-surface shadow-sm border border-outline-variant/10 text-sm">
+                          남성 {data.demographics.maleRatio}%
+                        </span>
+                      </>
+                    )}
+                    {!isRealData && data?.storeTop3?.[0] && (
+                      <span className="px-5 py-2.5 bg-white rounded-full text-on-surface shadow-sm border border-outline-variant/10 text-sm">
+                        주요 업종: {data.storeTop3[0].name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!loading && !hasData && (
+                <p className="text-2xl font-medium text-on-surface-variant">
+                  상권 데이터를 불러오지 못했습니다.
+                </p>
+              )}
             </div>
             <p className="text-secondary mt-12 text-sm leading-relaxed max-w-md">
-              해당 지역은 트렌드에 민감한 2030 여성층의 방문 빈도가 전국 평균 대비 1.5배 높게 측정되었습니다.
+              {isRealData
+                ? '서울시 생활인구 데이터(통신사 기반)를 분석하여 해당 행정동의 실제 유동인구 연령·성별 분포를 표시합니다.'
+                : '소상공인시장진흥공단 상권정보 데이터를 기반으로 업종 분포에서 주요 고객층을 추정합니다.'}
             </p>
           </div>
 
           <div className="md:col-span-5 bg-primary text-white rounded-xl p-10 flex flex-col justify-center">
-            <h3 className="text-xl font-bold mb-10 font-headline">연령별 인구 분포</h3>
-            <div className="space-y-8">
-              {[
-                { label: '2030 Millennials & Gen Z', pct: 68, opacity: 'bg-white' },
-                { label: '4050 Generation', pct: 24, opacity: 'bg-white/40' },
-                { label: 'Others', pct: 8, opacity: 'bg-white/40' },
-              ].map(({ label, pct, opacity }) => (
-                <div key={label}>
-                  <div className="flex justify-between mb-3 text-xs uppercase tracking-widest font-semibold text-white/70">
-                    <span>{label}</span>
-                    <span className="text-white">{pct}%</span>
+            <h3 className="text-xl font-bold mb-2 font-headline">
+              {isRealData ? '연령별 유동인구 분포' : '주요 업종별 고객층'}
+            </h3>
+            {isRealData && (
+              <p className="text-white/50 text-xs mb-8">실제 통신사 기반 데이터</p>
+            )}
+            {!isRealData && <div className="mb-8" />}
+
+            {loading && (
+              <div className="space-y-8">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="space-y-3">
+                    <div className="h-4 bg-white/20 rounded animate-pulse w-full" />
+                    <div className="h-1 bg-white/10 rounded-full w-full" />
                   </div>
-                  <div className="w-full h-1 bg-white/10 rounded-full">
-                    <div className={`${opacity} h-full rounded-full`} style={{ width: `${pct}%` }} />
+                ))}
+              </div>
+            )}
+
+            {!loading && displayTop3.length > 0 && (
+              <div className="space-y-8">
+                {displayTop3.map((item, i) => (
+                  <div key={item.rank}>
+                    <div className="flex justify-between mb-2 text-xs font-semibold text-white/70">
+                      <span className="flex items-center gap-2">
+                        <span className="text-white font-bold text-base">{item.rank}위</span>
+                        <span className="text-white">{item.demographic}</span>
+                      </span>
+                      <span className="text-white">{item.pct}%</span>
+                    </div>
+                    <div className="w-full h-1 bg-white/10 rounded-full">
+                      <div
+                        className={`${RANK_COLORS[i]} h-full rounded-full transition-all duration-700`}
+                        style={{ width: `${item.pct}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {!loading && !hasData && (
+              <p className="text-white/60 text-sm">
+                주소 설정 후 상권 데이터를 불러올 수 있습니다.
+              </p>
+            )}
           </div>
         </section>
+
+        {/* AI Strategy */}
+        {(data?.strategyText || data?.keyInsight) && (
+          <section className="mb-12">
+            <div className="bg-surface-container-low rounded-2xl p-8 border border-outline-variant/10 space-y-4">
+              <span className="text-xs uppercase tracking-[0.3em] text-primary font-semibold">AI Strategy</span>
+              {data.keyInsight && (
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-primary text-xl shrink-0 mt-0.5">lightbulb</span>
+                  <p className="font-bold text-on-surface text-lg leading-snug">{data.keyInsight}</p>
+                </div>
+              )}
+              {data.strategyText && (
+                <p className="text-on-surface-variant text-sm leading-relaxed pl-8">{data.strategyText}</p>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Personas */}
         <section className="mb-16">
@@ -111,37 +257,57 @@ export default function ReportPage() {
               <h2 className="text-4xl font-bold tracking-tight font-headline">AI 추천 브랜드 페르소나</h2>
             </div>
             <p className="text-secondary max-w-sm text-sm leading-relaxed">
-              브랜드의 핵심 가치와 시장 트렌드를 결합하여 AI가 도출한 최적의 4가지 무드보드와 페르소나 제안입니다.
+              지역 유동인구와 상권 분석을 바탕으로 AI가 추천하는 최적의 브랜드 페르소나입니다.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {personas.map((p) => (
-              <div key={p.id} className="group flex flex-col h-full">
-                <div className={`relative aspect-[4/5] rounded-xl overflow-hidden mb-6 ${p.bg}`}>
-                  <img
-                    src={p.image}
-                    alt={p.title}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-6 left-6">
-                    <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 inline-block">
-                      {p.label}
-                    </span>
-                    <h3 className="text-white text-2xl font-bold font-headline">{p.title}</h3>
-                  </div>
-                </div>
-                <p className="text-on-surface-variant text-sm leading-relaxed flex-grow">{p.desc}</p>
-                <Link
-                  href="/dashboard"
-                  className="mt-6 w-full py-4 rounded-xl bg-surface-container-highest text-on-surface font-semibold flex items-center justify-center gap-2 transition-all hover:bg-primary hover:text-white active:scale-[0.98]"
+            {personas.map((p) => {
+              const recList = data?.recommendedPersonas ?? []
+              const recRank = recList.indexOf(p.id)
+              const isRec = recRank !== -1
+              return (
+                <div
+                  key={p.id}
+                  className={`group flex flex-col h-full rounded-2xl transition-all duration-300 ${
+                    isRec ? 'ring-2 ring-primary ring-offset-4 scale-[1.02]' : ''
+                  }`}
                 >
-                  선택하기
-                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </Link>
-              </div>
-            ))}
+                  {isRec && (
+                    <div className="flex items-center gap-2 mb-3 px-1">
+                      <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {recRank + 1}
+                      </span>
+                      <span className="text-xs font-bold text-primary uppercase tracking-widest">
+                        {recRank === 0 ? 'AI 최우선 추천' : 'AI 추천'}
+                      </span>
+                    </div>
+                  )}
+                  <div className={`relative aspect-[4/5] rounded-xl overflow-hidden mb-6 ${p.bg}`}>
+                    <img src={p.image} alt={p.title} className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-6 left-6">
+                      <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 inline-block">
+                        {p.label}
+                      </span>
+                      <h3 className="text-white text-2xl font-bold font-headline">{p.title}</h3>
+                    </div>
+                  </div>
+                  <p className="text-on-surface-variant text-sm leading-relaxed flex-grow">{p.desc}</p>
+                  <Link
+                    href="/dashboard"
+                    className={`mt-6 w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                      isRec
+                        ? 'bg-primary text-white hover:opacity-90'
+                        : 'bg-surface-container-highest text-on-surface hover:bg-primary hover:text-white'
+                    }`}
+                  >
+                    선택하기
+                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  </Link>
+                </div>
+              )
+            })}
           </div>
         </section>
 

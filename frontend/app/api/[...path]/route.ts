@@ -5,7 +5,7 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
 async function proxyRequest(req: NextRequest, params: { path: string[] }) {
   const path = params.path.join('/')
   const url = new URL(req.url)
-  const backendUrl = `${BACKEND_URL}/api/${path}${url.search}`
+  const backendUrl = `${BACKEND_URL}/${path}${url.search}`
 
   const headers = new Headers()
   req.headers.forEach((value, key) => {

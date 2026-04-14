@@ -1,7 +1,44 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import InstagramConnect from '@/components/InstagramConnect'
+import { api } from '@/lib/api'
+import { setToken } from '@/lib/auth'
 
 export default function SignupPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    if (password !== confirmPassword) {
+      setError('비밀번호가 일치하지 않습니다.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      await api.auth.signup(email, password, name)
+      const { access_token } = await api.auth.login(email, password)
+      setToken(access_token)
+      router.push('/onboarding/setup')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col items-center justify-center p-6">
       <main className="w-full max-w-md">
@@ -16,14 +53,23 @@ export default function SignupPage() {
               </p>
             </div>
 
-            <form className="space-y-3" action="/onboarding/confirm">
+            {error && (
+              <div className="mb-4 px-4 py-3 rounded-lg bg-error/10 border border-error/20 text-error text-sm text-center">
+                {error}
+              </div>
+            )}
+
+            <form className="space-y-3" onSubmit={handleSubmit}>
               <div className="space-y-1">
                 <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider px-1">
-                  아이디
+                  이메일 (아이디)
                 </label>
                 <input
-                  type="text"
-                  placeholder="사용하실 아이디를 입력하세요"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="이메일을 입력하세요"
+                  required
                   className="w-full px-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary-container text-sm text-on-surface placeholder:text-outline/40 transition-all duration-200 outline-none"
                 />
               </div>
@@ -35,7 +81,10 @@ export default function SignupPage() {
                   </label>
                   <input
                     type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    required
                     className="w-full px-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary-container text-sm text-on-surface placeholder:text-outline/40 transition-all duration-200 outline-none"
                   />
                 </div>
@@ -45,7 +94,10 @@ export default function SignupPage() {
                   </label>
                   <input
                     type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
+                    required
                     className="w-full px-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary-container text-sm text-on-surface placeholder:text-outline/40 transition-all duration-200 outline-none"
                   />
                 </div>
@@ -57,46 +109,12 @@ export default function SignupPage() {
                 </label>
                 <input
                   type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   placeholder="운영하시는 매장명을 입력하세요"
+                  required
                   className="w-full px-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary-container text-sm text-on-surface placeholder:text-outline/40 transition-all duration-200 outline-none"
                 />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider px-1">
-                  카테고리 선택
-                </label>
-                <div className="relative">
-                  <select className="w-full px-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary-container text-sm text-on-surface appearance-none transition-all duration-200 outline-none">
-                    <option value="" disabled>업종을 선택해주세요</option>
-                    <option value="cafe&bakery">카페&베이커리 (Cafe&Bakery)</option>
-                    <option value="korean restaurant">한식당 (Korean Restaurant)</option>
-                    <option value="pub & bar">주점 (Pub & Bar)</option>
-                    <option value="western cuisine">양식 (Western Cuisine)</option>
-                    <option value="japanese & asian cuisine">일식&아시안 (Japanese & Asian Cuisine)</option>
-                    <option value="snack & fast food">분식 & 패스트푸드 (Snack & Fast food)</option>
-                    <option value="bbq & grill">고기 & 구이 (BBQ & Grill)</option>
-                  </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-xl">
-                    expand_more
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider px-1">
-                  위치 검색
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="매장 위치를 검색하세요"
-                    className="w-full pl-4 pr-10 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary-container text-sm text-on-surface placeholder:text-outline/40 transition-all duration-200 outline-none"
-                  />
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">
-                    search
-                  </span>
-                </div>
               </div>
 
               <div className="pt-2">
@@ -109,9 +127,10 @@ export default function SignupPage() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-3.5 px-6 rounded-lg text-white font-semibold text-sm tracking-wide cta-gradient hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-sm font-headline"
+                  disabled={loading}
+                  className="w-full py-3.5 px-6 rounded-lg text-white font-semibold text-sm tracking-wide cta-gradient hover:opacity-90 active:scale-[0.98] transition-all duration-200 shadow-sm font-headline disabled:opacity-60"
                 >
-                  회원가입 완료하기
+                  {loading ? '처리 중...' : '회원가입 완료하기'}
                 </button>
               </div>
             </form>
@@ -133,16 +152,6 @@ export default function SignupPage() {
           </p>
         </div>
       </main>
-
-      <footer className="w-full py-6 px-8 mt-6 flex flex-col md:flex-row justify-between items-center max-w-md border-t border-outline-variant/10">
-        <p className="text-[11px] tracking-wide text-on-secondary-container mb-2 md:mb-0 opacity-80">
-          © 2024 Digital Curator. The Human Archive.
-        </p>
-        <div className="flex gap-6">
-          <a className="text-[11px] text-on-secondary-container hover:underline opacity-60 hover:opacity-100 transition-all" href="#">Privacy Policy</a>
-          <a className="text-[11px] text-on-secondary-container hover:underline opacity-60 hover:opacity-100 transition-all" href="#">Terms</a>
-        </div>
-      </footer>
     </div>
   )
 }
