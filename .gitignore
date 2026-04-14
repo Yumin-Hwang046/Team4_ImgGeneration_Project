@@ -24,6 +24,9 @@ out/
 .DS_Store
 Thumbs.db
 
+.omc
+.claude
+
 # 이미지 파일 제외
 *.png
 *.jpg

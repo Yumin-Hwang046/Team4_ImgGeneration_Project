@@ -1,75 +1,97 @@
 """
 AI 연동 인터페이스 파일
 
+⚠️ 중요
+이 파일은 실제 AI 모델과 연결되는 지점입니다.
+
 현재는 mock / placeholder 상태이며,
 실제 모델이 준비되면 아래 함수들만 교체하면 됩니다.
+
+전체 백엔드는 이 반환 형식을 기준으로 동작합니다.
 """
 
 from typing import Dict, Optional
 
 
-def _safe_join(*parts: Optional[str]) -> str:
-    values = [str(part).strip() for part in parts if part]
-    return " | ".join(values)
-
-
+# =========================
+# IMAGE GENERATOR
+# =========================
 def call_image_generator(
-    *,
     business_category: str,
     menu_name: str,
     location: str,
-    mood: Optional[str] = None,
-    recommended_concept: Optional[str] = None,
+    mood: Optional[str],
+    recommended_concept: str,
     extra_prompt: Optional[str] = None,
     image_path: Optional[str] = None,
 ) -> Dict:
-    prompt = _safe_join(
-        f"업종: {business_category}",
-        f"메뉴: {menu_name}",
-        f"지역: {location}",
-        f"무드: {mood}" if mood else None,
-        f"추천 컨셉: {recommended_concept}" if recommended_concept else None,
-        f"추가 요청: {extra_prompt}" if extra_prompt else None,
-        f"참고 이미지: {image_path}" if image_path else None,
-    )
+    """
+    이미지 생성 API 연결 함수
 
+    🔧 팀원 작업 영역
+    실제 이미지 생성 모델 API를 여기서 호출하면 됩니다.
+
+    예:
+    - Stable Diffusion / SDXL
+    - IP-Adapter (case4_ip_adapter.py)
+    - 자체 inference 서버
+
+    반환 형식 (반드시 유지):
+    {
+        "success": True,
+        "image_url": "...",
+        "prompt_used": "...",
+        "error": None
+    }
+    """
+
+    # ===== 현재는 mock =====
     return {
         "success": True,
-        "image_url": "https://example.com/mock-image.jpg",
-        "prompt_used": prompt,
+        "image_url": "https://picsum.photos/1080/1080",
+        "prompt_used": recommended_concept,
         "error": None,
     }
 
 
+# =========================
+# TEXT GENERATOR
+# =========================
 def call_text_generator(
-    *,
     purpose: str,
     business_category: str,
     menu_name: str,
     location: str,
-    mood: Optional[str] = None,
-    weather_summary: Optional[str] = None,
-    season_context: Optional[str] = None,
-    recommended_concept: Optional[str] = None,
+    mood: Optional[str],
+    weather_summary: str,
+    season_context: str,
+    recommended_concept: str,
     extra_prompt: Optional[str] = None,
 ) -> Dict:
-    copy = (
-        f"{location}에서 {menu_name} 어떠세요? "
-        f"{weather_summary or '오늘 분위기'}에 어울리는 {business_category} 추천 콘텐츠입니다."
-    )
+    """
+    문구 생성 API 연결 함수
 
-    hashtags = [
-        f"#{menu_name.replace(' ', '')}",
-        f"#{business_category.replace(' ', '')}",
-        "#오늘의추천",
-    ]
+    🔧 팀원 작업 영역
+    실제 텍스트 생성 모델 API를 여기서 호출하면 됩니다.
 
-    if mood:
-        hashtags.append(f"#{mood.replace(' ', '')}")
+    예:
+    - GPT-4o-mini
+    - 자체 LLM
+    - text_generator/generator.py 직접 호출
 
+    반환 형식 (반드시 유지):
+    {
+        "success": True,
+        "copy": "...",
+        "hashtags": ["#..."],
+        "error": None
+    }
+    """
+
+    # ===== 현재는 mock =====
     return {
         "success": True,
-        "copy": copy,
-        "hashtags": hashtags,
+        "copy": f"{menu_name}의 특별한 맛을 지금 경험해보세요.",
+        "hashtags": ["#맛집", "#추천", "#오늘의메뉴"],
         "error": None,
     }
