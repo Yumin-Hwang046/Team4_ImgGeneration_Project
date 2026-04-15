@@ -15,9 +15,11 @@ type Channel = 'instagram_feed' | 'instagram_story'
 function ScheduleModal({
   onClose,
   onConfirm,
+  defaultChannel = 'instagram_feed',
 }: {
   onClose: () => void
   onConfirm: (scheduledAt: string, channel: Channel) => void
+  defaultChannel?: Channel
 }) {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
@@ -26,7 +28,7 @@ function ScheduleModal({
   const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM')
   const [hour, setHour] = useState(10)
   const [minute, setMinute] = useState(0)
-  const [channel, setChannel] = useState<Channel>('instagram_feed')
+  const [channel, setChannel] = useState<Channel>(defaultChannel)
 
   const MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
   const DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa']
@@ -269,6 +271,7 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
         <ScheduleModal
           onClose={() => setShowScheduleModal(false)}
           onConfirm={handleSchedule}
+          defaultChannel={uploadChannel}
         />
       )}
 

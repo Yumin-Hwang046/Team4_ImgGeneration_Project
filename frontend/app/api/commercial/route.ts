@@ -33,7 +33,24 @@ interface SeoulResponse {
   RESULT?: { CODE: string; MESSAGE: string }
 }
 
-// 인구통계 → 추천 페르소나 ID (1=Warm, 2=Clean, 3=Trendy, 4=Premium)
+interface KakaoPlace {
+  place_name?: string
+  category_name?: string
+  category_group_code?: string
+}
+
+interface NearbyCategory {
+  name: string
+  count: number
+}
+
+interface NearbyBusinesses {
+  total: number
+  categories: NearbyCategory[]
+  density: 'high' | 'medium' | 'low'
+}
+
+// 페르소나 ID: 1=Warm, 2=Clean, 3=Trendy, 4=Premium
 const PERSONA_REC: Record<string, number[]> = {
   '10대 여성': [3, 2], '20대 여성': [3, 1], '30대 여성': [1, 2],
   '40대 여성': [1, 4], '50대 여성': [4, 1], '60대 이상 여성': [1, 4],
@@ -41,6 +58,10 @@ const PERSONA_REC: Record<string, number[]> = {
   '40대 남성': [4, 1], '50대 남성': [4, 1], '60대 이상 남성': [4, 1],
   '10대 혼성': [3, 2], '20대 혼성': [3, 2], '30대 혼성': [2, 1],
   '40대 혼성': [1, 4], '50대 혼성': [4, 1], '60대 이상 혼성': [1, 4],
+}
+
+const PERSONA_NAME_TO_ID: Record<string, number> = {
+  Warm: 1, Clean: 2, Trendy: 3, Premium: 4,
 }
 
 const DEMO_MAP: Record<string, string> = {
@@ -74,9 +95,8 @@ async function fetchStoreData(admCd: string, serviceKey: string) {
   const apiUrl = `https://apis.data.go.kr/B553077/api/open/sdctrdartrdarinfopd/storeListInDong?${params}`
   try {
     const res = await fetch(apiUrl, { cache: 'no-store' })
-    if (!res.ok) { console.log('[commercial] 소상공인 HTTP error:', res.status); return null }
+    if (!res.ok) return null
     const data: ApiResponse = await res.json()
-    console.log('[commercial] 소상공인 totalCount:', data.body?.totalCount)
     return normalizeItems(data.body?.items?.item)
   } catch (e) {
     console.error('[commercial] 소상공인 error:', e)
@@ -86,7 +106,8 @@ async function fetchStoreData(admCd: string, serviceKey: string) {
 
 async function fetchSeoulDemographic(dongName: string, seoulKey: string) {
   if (!dongName) return null
-  const url = `http://openapi.seoul.go.kr:8088/${seoulKey}/json/VwsmAdstrdFlpopW/1/100/ADSTRD_CD_NM/${encodeURIComponent(dongName)}`
+  // 서울시 행정동 수 ~430개, 분기당 430행 → 2분기 커버하려면 1000행
+  const url = `http://openapi.seoul.go.kr:8088/${seoulKey}/json/VwsmAdstrdFlpopW/1/1000/`
   try {
     const res = await fetch(url, { cache: 'no-store' })
     if (!res.ok) return null
@@ -94,11 +115,22 @@ async function fetchSeoulDemographic(dongName: string, seoulKey: string) {
     const allRows = data.VwsmAdstrdFlpopW?.row ?? []
     if (!allRows.length) return null
 
-    // 가장 최신 분기 데이터 사용
-    const rows = allRows
-      .filter(r => r.ADSTRD_CD_NM === dongName)
-      .sort((a, b) => (b.STDR_YYQU_CD ?? '').localeCompare(a.STDR_YYQU_CD ?? ''))
-    const row = rows[0] ?? allRows[0]
+    // 최신 분기 우선, 없으면 이전 분기에서도 탐색
+    const latestQuarter = allRows
+      .map(r => r.STDR_YYQU_CD ?? '')
+      .sort((a, b) => b.localeCompare(a))[0]
+
+    const matchedRows = allRows.filter(r => r.ADSTRD_CD_NM === dongName)
+    const latestMatch = matchedRows.filter(r => r.STDR_YYQU_CD === latestQuarter)
+
+    const row = latestMatch[0] ?? matchedRows.sort(
+      (a, b) => (b.STDR_YYQU_CD ?? '').localeCompare(a.STDR_YYQU_CD ?? '')
+    )[0]
+
+    if (!row) {
+      console.log('[commercial] 서울 API 동명 미매칭:', dongName)
+      return null
+    }
 
     const male = Number(row.ML_FLPOP_CO ?? 0)
     const female = Number(row.FML_FLPOP_CO ?? 0)
@@ -106,27 +138,29 @@ async function fetchSeoulDemographic(dongName: string, seoulKey: string) {
     const genderLabel = female > male ? '여성' : male > female ? '남성' : '혼성'
 
     const ages = [
-      { label: '10대',    count: Number(row.AGRDE_10_FLPOP_CO ?? 0) },
-      { label: '20대',    count: Number(row.AGRDE_20_FLPOP_CO ?? 0) },
-      { label: '30대',    count: Number(row.AGRDE_30_FLPOP_CO ?? 0) },
-      { label: '40대',    count: Number(row.AGRDE_40_FLPOP_CO ?? 0) },
-      { label: '50대',    count: Number(row.AGRDE_50_FLPOP_CO ?? 0) },
+      { label: '10대',     count: Number(row.AGRDE_10_FLPOP_CO ?? 0) },
+      { label: '20대',     count: Number(row.AGRDE_20_FLPOP_CO ?? 0) },
+      { label: '30대',     count: Number(row.AGRDE_30_FLPOP_CO ?? 0) },
+      { label: '40대',     count: Number(row.AGRDE_40_FLPOP_CO ?? 0) },
+      { label: '50대',     count: Number(row.AGRDE_50_FLPOP_CO ?? 0) },
       { label: '60대 이상', count: Number(row.AGRDE_60_ABOVE_FLPOP_CO ?? 0) },
     ]
     const totalPop = ages.reduce((s, a) => s + a.count, 0) || 1
-    const top3 = [...ages].sort((a, b) => b.count - a.count).slice(0, 3).map((a, i) => ({
-      rank: i + 1,
-      demographic: `${a.label} ${genderLabel}`,
-      pct: Math.round((a.count / totalPop) * 100),
-      count: a.count,
-    }))
+    const top3 = [...ages]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+      .map((a, i) => ({
+        rank: i + 1,
+        demographic: `${a.label} ${genderLabel}`,
+        pct: Math.round((a.count / totalPop) * 100),
+        count: a.count,
+      }))
 
-    const top1Demo = top3[0]?.demographic ?? '30대 혼성'
     return {
       top3,
       maleRatio: Math.round((male / total) * 100),
       femaleRatio: Math.round((female / total) * 100),
-      recommendedPersonas: getRecommendedPersonas(top1Demo),
+      recommendedPersonas: getRecommendedPersonas(top3[0]?.demographic ?? '30대 혼성'),
     }
   } catch (e) {
     console.error('[commercial] Seoul error:', e)
@@ -134,16 +168,67 @@ async function fetchSeoulDemographic(dongName: string, seoulKey: string) {
   }
 }
 
+// 카카오 로컬 API로 반경 500m 주변 업소 분석
+async function fetchNearbyBusinesses(lat: string, lng: string, kakaoKey: string): Promise<NearbyBusinesses | null> {
+  if (!lat || !lng || !kakaoKey) return null
+
+  const headers = { Authorization: `KakaoAK ${kakaoKey}` }
+  const radius = 500
+
+  // 음식점(FD6), 카페(CE7) 카테고리 병렬 조회
+  const categoryGroups = ['FD6', 'CE7']
+  try {
+    const results = await Promise.all(
+      categoryGroups.map(async (code) => {
+        const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${code}&x=${lng}&y=${lat}&radius=${radius}&size=15`
+        const res = await fetch(url, { headers, cache: 'no-store' })
+        if (!res.ok) return []
+        const data = await res.json()
+        return (data.documents ?? []) as KakaoPlace[]
+      })
+    )
+
+    const allPlaces = results.flat()
+    if (!allPlaces.length) return null
+
+    // 세부 카테고리별 집계 (예: "음식점 > 한식 > 국밥" → "한식")
+    const catCounts: Record<string, number> = {}
+    for (const place of allPlaces) {
+      const parts = place.category_name?.split(' > ') ?? []
+      const subCat = parts[1] ?? parts[0] ?? '기타'
+      catCounts[subCat] = (catCounts[subCat] ?? 0) + 1
+    }
+
+    const categories = Object.entries(catCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, count]) => ({ name, count }))
+
+    const density: NearbyBusinesses['density'] =
+      allPlaces.length >= 20 ? 'high' : allPlaces.length >= 8 ? 'medium' : 'low'
+
+    return { total: allPlaces.length, categories, density }
+  } catch (e) {
+    console.error('[commercial] Kakao nearby error:', e)
+    return null
+  }
+}
+
 export async function GET(req: NextRequest) {
-  const admCd = req.nextUrl.searchParams.get('admCd') ?? ''
-  const dong  = req.nextUrl.searchParams.get('dong')  ?? ''
+  const admCd    = req.nextUrl.searchParams.get('admCd')    ?? ''
+  const dong     = req.nextUrl.searchParams.get('dong')     ?? ''
+  const lat      = req.nextUrl.searchParams.get('lat')      ?? ''
+  const lng      = req.nextUrl.searchParams.get('lng')      ?? ''
+  const category = req.nextUrl.searchParams.get('category') ?? ''
 
-  const serviceKey = process.env.SANGKWON_API_KEY ?? ''
-  const seoulKey   = process.env.SEOUL_API_KEY   ?? ''
+  const serviceKey = process.env.SANGKWON_API_KEY  ?? ''
+  const seoulKey   = process.env.SEOUL_API_KEY      ?? ''
+  const kakaoKey   = process.env.KAKAO_REST_API_KEY ?? ''
 
-  const [stores, seoulDemo] = await Promise.all([
+  const [stores, seoulDemo, nearby] = await Promise.all([
     admCd && serviceKey ? fetchStoreData(admCd, serviceKey) : Promise.resolve(null),
     dong  && seoulKey   ? fetchSeoulDemographic(dong, seoulKey) : Promise.resolve(null),
+    lat   && lng        ? fetchNearbyBusinesses(lat, lng, kakaoKey) : Promise.resolve(null),
   ])
 
   let storeTop3 = null
@@ -163,33 +248,41 @@ export async function GET(req: NextRequest) {
       }))
   }
 
-  // 추천 페르소나: 서울 데이터 우선, 없으면 업종 기반
   const top1Demo = seoulDemo?.top3[0]?.demographic
     ?? storeTop3?.[0]?.demographic
     ?? '30대 혼성'
 
   const rulePersonas = getRecommendedPersonas(top1Demo)
 
-  // LLM 전략 분석
   const strategy = await analyzeStrategy({
     demographics: seoulDemo,
     storeTop3,
+    nearby,
+    category,
     fallbackDemo: top1Demo,
   })
 
   return NextResponse.json({
     demographics: seoulDemo,
     storeTop3,
+    nearby,
     total: stores?.length ?? 0,
     recommendedPersonas: strategy?.recommendedPersonas ?? rulePersonas,
+    personaReasons: strategy?.personaReasons ?? null,
     strategyText: strategy?.strategyText ?? null,
     keyInsight: strategy?.keyInsight ?? null,
   })
 }
 
 interface StrategyInput {
-  demographics: { top3: { demographic: string; pct: number }[]; maleRatio: number; femaleRatio: number } | null
+  demographics: {
+    top3: { demographic: string; pct: number }[]
+    maleRatio: number
+    femaleRatio: number
+  } | null
   storeTop3: { name: string; pct: number }[] | null
+  nearby: NearbyBusinesses | null
+  category: string
   fallbackDemo: string
 }
 
@@ -201,28 +294,47 @@ async function analyzeStrategy(input: StrategyInput) {
     ? `유동인구 연령/성별 분포: ${input.demographics.top3.map(d => `${d.demographic} ${d.pct}%`).join(', ')}. 여성 ${input.demographics.femaleRatio}% / 남성 ${input.demographics.maleRatio}%.`
     : `주요 고객층 추정: ${input.fallbackDemo}`
 
+  const nearbyText = input.nearby
+    ? `반경 500m 주변 업소 ${input.nearby.total}개 (밀도: ${input.nearby.density === 'high' ? '높음' : input.nearby.density === 'medium' ? '보통' : '낮음'}). 주요 업종: ${input.nearby.categories.map(c => `${c.name}(${c.count}개)`).join(', ')}.`
+    : '주변 상권 데이터 없음.'
+
   const storeText = input.storeTop3?.length
-    ? `주변 상권 주요 업종: ${input.storeTop3.map(s => `${s.name}(${s.pct}%)`).join(', ')}.`
-    : '상권 데이터 없음.'
+    ? `행정동 내 업종 분포: ${input.storeTop3.map(s => `${s.name}(${s.pct}%)`).join(', ')}.`
+    : ''
+
+  const categoryText = input.category ? `운영 업종: ${input.category}.` : ''
 
   const prompt = `당신은 소상공인 SNS 마케팅 전략 전문가입니다.
 
-아래 지역 데이터를 분석하여 SNS 이미지 콘텐츠 전략을 제시해주세요.
+아래 데이터를 종합 분석하여 최적의 브랜드 페르소나를 추천해주세요.
 
+[매장 정보]
+${categoryText}
+
+[지역 유동인구 분석]
 ${demoText}
+
+[반경 500m 상권 분석]
+${nearbyText}
 ${storeText}
 
-사용 가능한 브랜드 페르소나:
-- Warm: 따뜻한 베이지 톤, 포근함, 감성적 안정감
-- Clean: 미니멀리즘, 깔끔함, 본질적 가치
-- Trendy: 최신 트렌드, 도시적 젊은 감성
-- Premium: 럭셔리, 절제된 고급스러움
+[선택 가능한 브랜드 페르소나 4종]
+- Warm: 따뜻한 베이지 톤, 포근함, 감성적 안정감 — 감성적 유대를 원하는 고객층에 적합
+- Clean: 미니멀리즘, 깔끔함, 본질적 가치 — 심플하고 신뢰감 있는 이미지를 원할 때
+- Trendy: 최신 트렌드, 도시적 젊은 감성 — 젊고 트렌디한 고객층 집중 공략 시
+- Premium: 럭셔리, 절제된 고급스러움 — 차별화된 프리미엄 포지셔닝 목표 시
+
+위 데이터를 근거로 4개 페르소나 중 이 지역/업종에 가장 적합한 1순위와 2순위를 선정하세요.
+주변 경쟁 업종 밀도, 주 유동인구 연령·성별, 업종 특성을 모두 고려하세요.
 
 JSON 형식으로만 응답하세요:
 {
-  "recommendedPersonas": ["페르소나명1", "페르소나명2"],
-  "strategyText": "2-3문장 마케팅 전략",
-  "keyInsight": "핵심 인사이트 한 문장"
+  "rank1": "페르소나명",
+  "rank2": "페르소나명",
+  "reason1": "1순위 선택 근거 (데이터 기반, 한 문장)",
+  "reason2": "2순위 선택 근거 (데이터 기반, 한 문장)",
+  "keyInsight": "이 지역 상권의 핵심 인사이트 (한 문장)",
+  "strategyText": "SNS 이미지 마케팅 전략 2-3문장"
 }`
 
   try {
@@ -233,25 +345,30 @@ JSON 형식으로만 응답하세요:
         'Authorization': `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-mini',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 400,
-        response_format: { type: 'json_object' },
+        max_completion_tokens: 2000,
       }),
       cache: 'no-store',
     })
     if (!res.ok) return null
     const data = await res.json()
-    const content = data.choices?.[0]?.message?.content
-    if (!content) return null
-    const parsed = JSON.parse(content)
-    // 페르소나 ID로 변환
-    const PERSONA_NAME_TO_ID: Record<string, number> = { Warm: 1, Clean: 2, Trendy: 3, Premium: 4 }
-    const ids = (parsed.recommendedPersonas as string[])
-      .map(n => PERSONA_NAME_TO_ID[n])
-      .filter(Boolean)
+    const raw = data.choices?.[0]?.message?.content
+    if (!raw) return null
+
+    // 마크다운 코드블록 제거 후 파싱
+    const jsonStr = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    const parsed = JSON.parse(jsonStr)
+    const rank1Id = PERSONA_NAME_TO_ID[parsed.rank1]
+    const rank2Id = PERSONA_NAME_TO_ID[parsed.rank2]
+    const ids = [rank1Id, rank2Id].filter(Boolean)
+
     return {
       recommendedPersonas: ids.length ? ids : null,
+      personaReasons: {
+        rank1: parsed.reason1 ?? null,
+        rank2: parsed.reason2 ?? null,
+      },
       strategyText: parsed.strategyText ?? null,
       keyInsight: parsed.keyInsight ?? null,
     }

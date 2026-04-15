@@ -3,13 +3,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import SideBar from '@/components/SideBar'
 import { api, CalendarEventItem, UploadScheduleItem } from '@/lib/api'
-import { getStoredLocation, setStoredLocation } from '@/lib/auth'
+import { getStoredLocation, setStoredLocation, getStoredLat, getStoredLng, getStoredCategory } from '@/lib/auth'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Tag = '완료' | '예약' | '행사' | '기타'
 type ViewMode = '월간' | '주간' | '리스트'
-type CalEventSource = 'event' | 'schedule'
+type CalEventSource = 'event' | 'schedule' | 'festival'
 
 type CalEvent = {
   id: number
@@ -384,22 +384,92 @@ function ListView({ year, month, events, onEventClick, onAddNew }: {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// ─── Cache helpers ────────────────────────────────────────────────────────────
+
+function getCache<T>(key: string, ttlMs: number): T | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const { data, ts } = JSON.parse(raw) as { data: T; ts: number }
+    if (Date.now() - ts > ttlMs) return null
+    return data
+  } catch { return null }
+}
+
+function setCache<T>(key: string, data: T): void {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })) } catch { /* noop */ }
+}
+
+// ─── Festival → CalEvent 변환 ─────────────────────────────────────────────────
+
+type FestivalItem = { title: string; address: string; startDate: string; endDate: string; distance: string | null; isNearby: boolean }
+
+function shortAddress(addr: string): string {
+  if (!addr) return ''
+  const parts = addr.trim().split(/\s+/)
+  return parts.slice(0, 2).join(' ')
+}
+
+function festivalToCalEvents(festivals: FestivalItem[], year: number, month: number): CalEvent[] {
+  const todayMidnight = new Date()
+  todayMidnight.setHours(0, 0, 0, 0)
+
+  return festivals.flatMap((f, idx) => {
+    const days: CalEvent[] = []
+    const start = new Date(f.startDate)
+    const end   = new Date(f.endDate)
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return days
+    // 이미 끝난 행사는 캘린더에 표시 안 함
+    if (end < todayMidnight) return days
+    const location = shortAddress(f.address)
+    const displayTitle = location ? `${f.title} (${location})` : f.title
+    for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      if (d.getMonth() === month && d.getFullYear() === year && d >= todayMidnight) {
+        days.push({
+          id: 9_000_000 + idx * 100 + d.getDate(),
+          backendId: 0,
+          source: 'festival',
+          date: d.getDate(),
+          title: displayTitle,
+          time: '종일',
+          tag: '행사',
+          colorClass: TAG_COLORS['행사'],
+        })
+      }
+    }
+    return days
+  })
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function CalendarPage() {
   const today = new Date()
   const [year, setYear]   = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
   const [view, setView]   = useState<ViewMode>('월간')
-  const [events, setEvents] = useState<CalEvent[]>([])
+  const [events, setEvents]               = useState<CalEvent[]>([])
+  const [festivalEvents, setFestivalEvents] = useState<CalEvent[]>([])
   const [modal, setModal]   = useState<ModalState>(null)
   const [location, setLocation] = useState(getStoredLocation)
   const [locationInput, setLocationInput] = useState(getStoredLocation)
-  const [weatherSummary, setWeatherSummary] = useState<string | null>(null)
+  const [weather, setWeather] = useState<{
+    summary: string; condition: string; icon: string
+    temp: number; hasRain: boolean; hasSnow: boolean; rainSummary: string | null
+  } | null>(null)
+  const [festivals, setFestivals] = useState<FestivalItem[]>([])
   const [aiTip, setAiTip] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
+
+  useEffect(() => { setHasMounted(true) }, [])
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1) }
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1) }
 
+  // 유저 일정만 별도 관리 (축제와 분리)
   const loadEvents = useCallback(() => {
     setLoading(true)
     Promise.all([
@@ -419,23 +489,113 @@ export default function CalendarPage() {
 
   useEffect(() => { loadEvents() }, [loadEvents])
 
+  // 날씨 + 축제 + AI팁 (캐시 우선)
   useEffect(() => {
-    if (!location) return
-    const todayStr = today.toISOString().split('T')[0]
-    api.calendar.getDay(todayStr, location)
-      .then(data => {
-        setWeatherSummary(data.weather.summary)
-        const rec = data.recommendation
-        const ch = rec.recommended_channel === 'instagram_feed' ? '피드' : '스토리'
-        setAiTip(`${rec.recommended_time}에 ${ch} 게시 추천 — ${rec.recommended_concept}`)
+    const lat      = getStoredLat()
+    const lng      = getStoredLng()
+    const category = getStoredCategory()
+    if (!lat || !lng) return
+
+    const weatherKey  = `cache_weather_${lat}_${lng}`
+    const festKey     = `cache_festival_v2_${year}`
+    const tipKey      = `cache_tip_${year}_${month + 1}_${category}`
+
+    const cachedWeather   = getCache<typeof weather>(weatherKey, 60 * 60 * 1000)        // 1시간
+    const cachedFestivals = getCache<FestivalItem[]>(festKey, 24 * 60 * 60 * 1000)      // 24시간
+    const cachedTip       = getCache<string>(tipKey, 6 * 60 * 60 * 1000)               // 6시간
+
+    if (cachedWeather)   setWeather(cachedWeather)
+    if (cachedFestivals) {
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const ongoingToday = cachedFestivals.filter(f => f.startDate <= todayStr && f.endDate >= todayStr)
+      setFestivals(ongoingToday)
+      setFestivalEvents(festivalToCalEvents(cachedFestivals, year, month))
+    }
+    if (cachedTip) setAiTip(cachedTip)
+
+    // 캐시 다 있으면 API 호출 생략
+    if (cachedWeather && cachedFestivals && cachedTip) return
+
+    Promise.all([
+      cachedWeather   ? Promise.resolve(cachedWeather)
+        : fetch(`/api/weather?lat=${lat}&lng=${lng}`).then(r => r.json()).catch(() => null),
+      cachedFestivals ? Promise.resolve(cachedFestivals)
+        : fetch(`/api/festival?lat=${lat}&lng=${lng}&year=${year}`).then(r => r.json()).catch(() => []),
+    ]).then(async ([weatherData, festivalData]) => {
+      if (weatherData && !weatherData.error) {
+        setWeather(weatherData)
+        setCache(weatherKey, weatherData)
+      }
+      if (Array.isArray(festivalData)) {
+        const todayStr = new Date().toISOString().slice(0, 10)
+        // 위젯: 오늘 진행 중인 행사만
+        const ongoingToday = festivalData.filter((f: FestivalItem) =>
+          f.startDate <= todayStr && f.endDate >= todayStr
+        )
+        setFestivals(ongoingToday)
+        setFestivalEvents(festivalToCalEvents(festivalData, year, month))
+        setCache(festKey, festivalData)
+      }
+
+      if (cachedTip) return
+      const wData = weatherData && !weatherData.error ? weatherData : cachedWeather
+      if (!wData) return
+
+      const now = new Date()
+      const todayStr = now.toISOString().slice(0, 10)
+      const currentHour = now.getHours()
+      const allFests: FestivalItem[] = Array.isArray(festivalData) ? festivalData : (cachedFestivals ?? [])
+      const nearbyOngoing = allFests.filter(f =>
+        f.isNearby && f.startDate <= todayStr && f.endDate >= todayStr
+      )
+
+      fetch('/api/calendar-tip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weather: wData,
+          festivals: nearbyOngoing,
+          category,
+          currentHour,
+        }),
       })
-      .catch(() => {})
+        .then(r => r.json())
+        .then(d => {
+          if (d.tip) {
+            setAiTip(d.tip)
+            setCache(tipKey, d.tip)
+          }
+        })
+        .catch(() => {})
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location])
+  }, [year, month])
+
+  // 모든 달력 표시 이벤트 = 유저 일정 + 축제 이벤트
+  const allEvents = [...events, ...festivalEvents]
 
   const handleLocationApply = () => {
     setStoredLocation(locationInput)
     setLocation(locationInput)
+  }
+
+  const handleRefreshCache = () => {
+    const lat      = getStoredLat()
+    const lng      = getStoredLng()
+    const category = getStoredCategory()
+    Object.keys(localStorage)
+      .filter(k =>
+        k.startsWith(`cache_weather_${lat}_${lng}`) ||
+        k.startsWith(`cache_festival_v2_${year}`) ||
+        k.startsWith(`cache_tip_${year}_${month + 1}_${category}`)
+      )
+      .forEach(k => localStorage.removeItem(k))
+    setWeather(null)
+    setFestivals([])
+    setFestivalEvents([])
+    setAiTip(null)
+    // 재조회 트리거 (month 상태를 잠깐 바꿨다 되돌리는 대신 강제 리렌더)
+    window.location.reload()
   }
 
   const openAdd  = (date: number) => setModal({ mode: 'add', date })
@@ -482,29 +642,63 @@ export default function CalendarPage() {
           {/* Weather & AI Tip */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0">
             <div className="lg:col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-stone-100 space-y-3">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">날씨 · 행사</span>
+                <button onClick={handleRefreshCache} title="날씨·행사·팁 새로고침"
+                  className="flex items-center gap-1 text-[10px] text-stone-400 hover:text-primary transition-colors">
+                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  새로고침
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-primary-container/20 rounded-full flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-primary text-xl">wb_sunny</span>
+                  <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    {weather?.icon ?? 'wb_sunny'}
+                  </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-on-surface truncate">
-                    {location ? (weatherSummary ?? '날씨 조회 중...') : '위치를 설정하세요'}
-                  </p>
-                  {location && <p className="text-xs text-on-surface-variant/70 mt-0.5">{location}</p>}
+                  {weather ? (
+                    <>
+                      <p className="text-sm font-bold text-on-surface">
+                        {weather.condition} <span className="text-primary">{weather.temp}°C</span>
+                      </p>
+                      {weather.rainSummary ? (
+                        <p className={`text-xs font-medium mt-0.5 flex items-center gap-1 ${weather.hasSnow ? 'text-sky-400' : 'text-blue-500'}`}>
+                          <span className="material-symbols-outlined text-sm">
+                            {weather.hasSnow ? 'weather_snowy' : 'water_drop'}
+                          </span>
+                          {weather.rainSummary}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-on-surface-variant/70 mt-0.5">{location || '오늘 날씨'}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-on-surface-variant">
+                      {hasMounted && getStoredLat() ? '날씨 조회 중...' : '온보딩에서 주소를 등록하면\n날씨가 표시됩니다'}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={locationInput}
-                  onChange={e => setLocationInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleLocationApply()}
-                  placeholder="예: 성수동"
-                  className="flex-1 px-3 py-1.5 text-xs bg-surface-container-low rounded-lg outline-none focus:ring-1 focus:ring-primary"
-                />
-                <button onClick={handleLocationApply} className="px-3 py-1.5 text-xs bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
-                  적용
-                </button>
+              <div className="border-t border-stone-100 pt-3">
+                <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-1.5">
+                  인근 행사 {hasMounted && <span className="text-stone-400 normal-case font-normal">({festivals.length}건)</span>}
+                </p>
+                {festivals.length > 0 ? (
+                  <div className="space-y-1">
+                    {festivals.slice(0, 2).map((f, i) => (
+                      <div key={i} className="flex items-start gap-1.5">
+                        <span className="material-symbols-outlined text-red-400 text-sm mt-0.5 shrink-0">celebration</span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-on-surface truncate">{f.title}</p>
+                          <p className="text-[10px] text-on-surface-variant/70">{f.startDate} ~ {f.endDate}{f.distance ? ` · ${f.distance}` : ''}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-stone-400">이번 달 주변 행사 없음</p>
+                )}
               </div>
             </div>
 
@@ -513,7 +707,7 @@ export default function CalendarPage() {
               <div className="space-y-1">
                 <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest">AI Curator Tip</p>
                 <p className="text-on-secondary-container font-medium text-[0.85rem] leading-relaxed">
-                  {aiTip ?? (location ? '오늘의 날씨와 일정을 분석하고 있습니다...' : '위치를 설정하면 AI 추천을 받을 수 있습니다.')}
+                  {aiTip ?? (hasMounted && getStoredLat() ? '날씨와 주변 행사를 분석하고 있습니다...' : '온보딩에서 주소를 등록하면 AI 추천을 받을 수 있습니다.')}
                 </p>
               </div>
             </div>
@@ -544,9 +738,9 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            {view === '월간' && <CalendarGrid year={year} month={month} events={events} onDayClick={openAdd} onEventClick={openEdit} />}
-            {view === '주간' && <WeekView year={year} month={month} baseDay={today.getDate()} events={events} onDayClick={openAdd} onEventClick={openEdit} />}
-            {view === '리스트' && <ListView year={year} month={month} events={events} onEventClick={openEdit} onAddNew={() => openAdd(today.getDate())} />}
+            {view === '월간' && <CalendarGrid year={year} month={month} events={allEvents} onDayClick={openAdd} onEventClick={openEdit} />}
+            {view === '주간' && <WeekView year={year} month={month} baseDay={today.getDate()} events={allEvents} onDayClick={openAdd} onEventClick={openEdit} />}
+            {view === '리스트' && <ListView year={year} month={month} events={allEvents} onEventClick={openEdit} onAddNew={() => openAdd(today.getDate())} />}
           </div>
         </div>
       </main>

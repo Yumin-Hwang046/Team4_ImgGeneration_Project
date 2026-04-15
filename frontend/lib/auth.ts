@@ -45,6 +45,8 @@ export function setStoredStoreName(name: string): void {
 
 export const ADM_CD_KEY = 'user_adm_cd'
 export const DONG_NAME_KEY = 'user_dong_name'
+export const LAT_KEY = 'user_lat'
+export const LNG_KEY = 'user_lng'
 
 export function getStoredAdmCd(): string {
   if (typeof window === 'undefined') return ''
@@ -62,4 +64,22 @@ export function getStoredDongName(): string {
 
 export function setStoredDongName(dong: string): void {
   localStorage.setItem(DONG_NAME_KEY, dong)
+}
+
+export function getStoredLat(): string {
+  if (typeof window === 'undefined') return ''
+  return localStorage.getItem(LAT_KEY) ?? ''
+}
+
+export function setStoredLat(lat: string): void {
+  localStorage.setItem(LAT_KEY, lat)
+}
+
+export function getStoredLng(): string {
+  if (typeof window === 'undefined') return ''
+  return localStorage.getItem(LNG_KEY) ?? ''
+}
+
+export function setStoredLng(lng: string): void {
+  localStorage.setItem(LNG_KEY, lng)
 }
