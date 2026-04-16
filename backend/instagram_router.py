@@ -1,21 +1,4 @@
-"""
-Instagram 업로드 API
-
-⚠️ 현재 상태: MOCK
-
-Meta Graph API 연결 전까지는 mock으로 동작합니다.
-
-🔧 실연동 시 수정 위치:
-- upload_to_instagram()
-- schedule_instagram_upload()
-
-Meta API 연결 시:
-- ACCESS TOKEN 필요
-- Instagram Business 계정 필요
-- Facebook Page 연결 필요
-"""
-
-
+import requests as http_requests
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -29,6 +12,7 @@ from schemas import (
 )
 from auth import get_current_user
 
+GRAPH_API = "https://graph.facebook.com/v19.0"
 
 router = APIRouter(prefix="/instagram", tags=["instagram"])
 
@@ -43,6 +27,62 @@ def validate_channel(channel: str) -> str:
     return channel
 
 
+def _require_instagram(user: User) -> tuple[str, str]:
+    """Instagram 연동 여부 확인 후 (account_id, access_token) 반환"""
+    if not user.instagram_account_id or not user.instagram_access_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Instagram 계정이 연동되지 않았습니다. 설정에서 Instagram을 연동해주세요.",
+        )
+    return user.instagram_account_id, user.instagram_access_token
+
+
+def _build_caption(generation: Generation) -> str:
+    parts = []
+    if generation.generated_copy:
+        parts.append(generation.generated_copy)
+    if generation.hashtags:
+        parts.append(generation.hashtags)
+    return "\n\n".join(parts)
+
+
+def _publish_media(ig_account_id: str, access_token: str, image_url: str, caption: str, channel: str) -> str:
+    """미디어 컨테이너 생성 후 게시, 게시된 미디어 ID 반환"""
+    media_type = "STORIES" if channel == "instagram_story" else None
+
+    container_params: dict = {
+        "image_url": image_url,
+        "caption": caption,
+        "access_token": access_token,
+    }
+    if media_type:
+        container_params["media_type"] = media_type
+
+    container_res = http_requests.post(
+        f"{GRAPH_API}/{ig_account_id}/media",
+        params=container_params,
+        timeout=30,
+    )
+    if not container_res.ok:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Instagram 미디어 생성 실패: {container_res.json().get('error', {}).get('message', container_res.text)}",
+        )
+    creation_id = container_res.json().get("id")
+
+    publish_res = http_requests.post(
+        f"{GRAPH_API}/{ig_account_id}/media_publish",
+        params={"creation_id": creation_id, "access_token": access_token},
+        timeout=30,
+    )
+    if not publish_res.ok:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Instagram 게시 실패: {publish_res.json().get('error', {}).get('message', publish_res.text)}",
+        )
+    return publish_res.json().get("id", "")
+
+
 # =========================
 # 업로드 (즉시)
 # =========================
@@ -52,16 +92,8 @@ def upload_to_instagram(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    🔧 실연동 시 이 함수 내부를 교체
-
-    Meta Graph API 흐름:
-    1. image_url 업로드
-    2. media 생성
-    3. publish 호출
-    """
-
     channel = validate_channel(payload.channel)
+    ig_account_id, access_token = _require_instagram(current_user)
 
     generation = (
         db.query(Generation)
@@ -74,12 +106,17 @@ def upload_to_instagram(
     if not generation:
         raise HTTPException(status_code=404, detail="Generation not found")
 
-    # ===== MOCK 응답 =====
+    if not generation.generated_image_url:
+        raise HTTPException(status_code=400, detail="업로드할 이미지가 없습니다.")
+
+    caption = _build_caption(generation)
+    _publish_media(ig_account_id, access_token, generation.generated_image_url, caption, channel)
+
     return InstagramUploadResponse(
         generation_id=generation.id,
         channel=channel,
-        status="MOCK_SUCCESS",
-        message="인스타 업로드 mock 처리 완료",
+        status="SUCCESS",
+        message="Instagram 업로드 완료",
     )
 
 

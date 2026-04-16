@@ -10,10 +10,13 @@ function InstagramSuccessContent() {
 
   useEffect(() => {
     const token = searchParams.get('token')
+    const isNew = searchParams.get('new') === 'true'
+    const linked = searchParams.get('linked') === 'true'
 
     if (token) {
       setToken(token)
-      router.replace('/onboarding/setup')
+      if (linked) router.replace('/settings')
+      else router.replace(isNew ? '/onboarding/setup' : '/dashboard')
     } else {
       router.replace('/auth/login?error=auth_failed')
     }

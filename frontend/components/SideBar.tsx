@@ -86,7 +86,9 @@ export default function SideBar() {
               {user?.name ?? '—'}
             </span>
             <span className="text-[10px] text-on-surface-variant/60 truncate">
-              {user?.email ?? '로딩 중...'}
+              {user?.instagram_username
+                ? `@${user.instagram_username}`
+                : (user?.email ?? '로딩 중...')}
             </span>
           </div>
         </div>

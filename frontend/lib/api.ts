@@ -22,6 +22,7 @@ export interface UserResponse {
 }
 
 export interface MeResponse extends UserResponse {
+  instagram_username?: string | null
   created_at: string
   updated_at: string
 }

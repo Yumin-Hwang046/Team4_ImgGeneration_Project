@@ -46,6 +46,12 @@ export default function StudioPage() {
 
   const handleGenerate = async () => {
     setError(null)
+
+    if (!imageFile && !extraPrompt.trim()) {
+      setError('이미지를 업로드하거나 문구 힌트를 입력해주세요.')
+      return
+    }
+
     setLoading(true)
 
     try {

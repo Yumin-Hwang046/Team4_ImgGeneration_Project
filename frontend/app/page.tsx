@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import InstagramConnect from '@/components/InstagramConnect'
 
 export default function LandingPage() {
   return (
@@ -64,6 +65,9 @@ export default function LandingPage() {
                 </span>
                 카드 등록 없이 시작
               </div>
+            </div>
+            <div className="w-full max-w-[380px]">
+              <InstagramConnect />
             </div>
 
             <div className="grid grid-cols-2 gap-4 mt-8 w-full max-w-[500px]">

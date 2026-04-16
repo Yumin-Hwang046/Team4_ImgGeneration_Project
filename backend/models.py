@@ -8,12 +8,18 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)  # OAuth 유저는 NULL
     name = Column(String(100), nullable=False)
     role = Column(String(50), nullable=False, default="user")
     is_active = Column(Integer, nullable=False, default=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    # Instagram / Meta OAuth
+    instagram_user_id = Column(String(100), unique=True, nullable=True, index=True)
+    instagram_account_id = Column(String(100), nullable=True)    # IG Business Account ID
+    instagram_username = Column(String(100), nullable=True)      # @username
+    instagram_access_token = Column(String(500), nullable=True)  # long-lived token
 
     generations = relationship("Generation", back_populates="user")
     upload_schedules = relationship("UploadSchedule", back_populates="user", cascade="all, delete-orphan")
