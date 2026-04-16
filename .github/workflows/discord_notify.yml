@@ -26,7 +26,7 @@ jobs:
           if [ "$EVENT" = "push" ]; then
             MSG="📦 **[PUSH]** \`$REPO\`\n👤 $ACTOR → \`${{ github.ref_name }}\`\n💬 ${{ github.event.head_commit.message }}"
           elif [ "$EVENT" = "pull_request" ]; then
-            MSG="🔀 **[PR ${{ github.event.action }}]** \`$REPO\`\n👤 $ACTOR\n📝 ${{ github.event.pull_request.title }}"
+            MSG="🔀 **[PR ${{ github.event.action }}]** \`$REPO\`\n👤 $ACTOR\n📝 ${{ github.event.pull_request.title }}\n🔗 ${{ github.event.pull_request.html_url }}"
           elif [ "$EVENT" = "issues" ]; then
             MSG="🐛 **[ISSUE ${{ github.event.action }}]** \`$REPO\`\n👤 $ACTOR\n📝 ${{ github.event.issue.title }}"
           fi
