@@ -6,9 +6,9 @@ import requests
 from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from db import get_db, SessionLocal
-from models import Generation, GeneratedImage, User
-from schemas import (
+from backend.db import get_db, SessionLocal
+from backend.models import Generation, GeneratedImage, User
+from backend.schemas import (
     GenerationCreate,
     GenerationUpdate,
     GenerationResponse,
@@ -17,17 +17,13 @@ from schemas import (
     GeneratedImageItem,
     RegenerateImageResponse,
 )
-from auth import get_current_user
-from ai_adapter import normalize_image_result, normalize_text_result
-from ai_clients import call_image_generator, call_text_generator
+from backend.auth import get_current_user
+from backend.ai_adapter import normalize_image_result, normalize_text_result
+from backend.ai_clients import call_image_generator, call_text_generator
 
 
 router = APIRouter(prefix="/generations", tags=["generations"])
 
-
-# =========================================================
-# Helper functions
-# =========================================================
 
 def parse_target_datetime(date_str: str, time_str: Optional[str]) -> datetime:
     if time_str:
@@ -40,12 +36,11 @@ def get_season_context(target_dt: datetime) -> str:
 
     if month in [3, 4, 5]:
         return "봄 시즌, 야외활동 증가, 산뜻한 분위기 선호"
-    elif month in [6, 7, 8]:
+    if month in [6, 7, 8]:
         return "여름 시즌, 시원함/청량감/더위 회피 니즈 증가"
-    elif month in [9, 10, 11]:
+    if month in [9, 10, 11]:
         return "가을 시즌, 따뜻함/감성/저녁 방문 유도에 적합"
-    else:
-        return "겨울 시즌, 온기/포근함/실내 체류 강조에 적합"
+    return "겨울 시즌, 온기/포근함/실내 체류 강조에 적합"
 
 
 def weather_code_to_text(code: int) -> str:
@@ -119,10 +114,7 @@ def get_weather_summary(location: str, target_dt: datetime) -> str:
 
         target_hour = target_dt.strftime("%Y-%m-%dT%H:00")
 
-        if target_hour in times:
-            idx = times.index(target_hour)
-        else:
-            idx = 0
+        idx = times.index(target_hour) if target_hour in times else 0
 
         weather_text = weather_code_to_text(codes[idx]) if idx < len(codes) else "정보 없음"
         temp = temps[idx] if idx < len(temps) else "?"
@@ -192,10 +184,6 @@ def get_next_version_no(db: Session, generation_id: int) -> int:
     )
     return 1 if not latest else latest.version_no + 1
 
-
-# =========================================================
-# Background processing
-# =========================================================
 
 def process_generation_task(
     generation_id: int,
@@ -283,7 +271,6 @@ def process_generation_task(
         generated_copy = text_result["copy"]
         hashtags = text_result["hashtags"]
 
-        # 후처리 최종 이미지 자리 (현재는 아직 오버레이 미적용이라 None)
         final_image_url = None
 
         generation.purpose = purpose
@@ -327,9 +314,7 @@ def process_generation_task(
         db.close()
 
 
-def process_regenerate_task(
-    generation_id: int,
-):
+def process_regenerate_task(generation_id: int):
     db = SessionLocal()
 
     try:
@@ -386,10 +371,6 @@ def process_regenerate_task(
     finally:
         db.close()
 
-
-# =========================================================
-# CRUD
-# =========================================================
 
 @router.post("", response_model=GenerationResponse)
 def create_generation(
@@ -522,10 +503,6 @@ def delete_generation(
     return {"message": "삭제되었습니다."}
 
 
-# =========================================================
-# RUN API
-# =========================================================
-
 @router.post("/run")
 async def run_generation(
     background_tasks: BackgroundTasks,
@@ -543,11 +520,11 @@ async def run_generation(
 ):
     try:
         parse_target_datetime(target_date, target_time)
-    except ValueError:
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="target_date 또는 target_time 형식이 올바르지 않습니다. 예: 2026-05-01 / 18:30",
-        )
+        ) from exc
 
     uploaded_filename = None
     if image_file is not None and getattr(image_file, "filename", ""):
