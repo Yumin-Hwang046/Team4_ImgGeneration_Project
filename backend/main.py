@@ -1,19 +1,10 @@
 from fastapi import FastAPI
 
-from db import Base, engine
-from auth import router as auth_router
-from generations import router as generations_router
-from calendar_router import router as calendar_router
-from instagram_router import router as instagram_router
-
-Base.metadata.create_all(bind=engine)
+from routes.image_router import router as image_router
 
 app = FastAPI(title="Team4 Project Backend")
 
-app.include_router(auth_router)
-app.include_router(generations_router)
-app.include_router(calendar_router)
-app.include_router(instagram_router)
+app.include_router(image_router)
 
 
 @app.get("/")

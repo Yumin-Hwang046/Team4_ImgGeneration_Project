@@ -6,7 +6,7 @@ import torch
 from PIL import Image, ImageOps
 from diffusers import AutoPipelineForInpainting
 
-from observability import log_langfuse_trace, log_wandb
+from observability import log_langfuse_trace, log_wandb, to_langfuse_media, to_wandb_image
 
 # SDXL Inpaint 모델
 SDXL_INPAINT_ID = os.getenv(
@@ -151,7 +151,16 @@ def generate_image_case5_inpaint_ip_adapter(
         "output_url": result["url"],
         "duration_sec": duration,
     }
-    log_wandb("case5.pipeline", log_payload)
+    wandb_images = {
+        "input_user_image": to_wandb_image(user_image_path, "case5.pipeline.input.user"),
+        "input_reference_image": to_wandb_image(reference_image_path, "case5.pipeline.input.reference"),
+        "input_mask_image": to_wandb_image(mask_image_path, "case5.pipeline.input.mask"),
+        "output_image": to_wandb_image(out_path, "case5.pipeline.output"),
+    }
+    log_wandb(
+        "case5.pipeline",
+        {**log_payload, **{k: v for k, v in wandb_images.items() if v is not None}},
+    )
     log_langfuse_trace(
         name="case5.pipeline",
         input={
@@ -161,8 +170,14 @@ def generate_image_case5_inpaint_ip_adapter(
             "user_image_path": user_image_path,
             "reference_image_path": reference_image_path,
             "mask_image_path": mask_image_path,
+            "user_image": to_langfuse_media(user_image_path),
+            "reference_image": to_langfuse_media(reference_image_path),
+            "mask_image": to_langfuse_media(mask_image_path),
         },
-        output=result,
+        output={
+            **result,
+            "output_image": to_langfuse_media(out_path),
+        },
         metadata=log_payload,
         tags=["pipeline", "case5"],
     )

@@ -6,7 +6,7 @@ import torch
 from PIL import Image
 from diffusers import AutoPipelineForImage2Image
 
-from observability import log_langfuse_trace, log_wandb
+from observability import log_langfuse_trace, log_wandb, to_langfuse_media, to_wandb_image
 # SDXL Base 모델
 SDXL_BASE_ID = "stabilityai/stable-diffusion-xl-base-1.0"
 
@@ -132,7 +132,15 @@ def generate_image_case4_ip_adapter(
         "output_url": result["url"],
         "duration_sec": duration,
     }
-    log_wandb("case4.pipeline", log_payload)
+    wandb_images = {
+        "input_user_image": to_wandb_image(user_image_path, "case4.pipeline.input.user"),
+        "input_reference_image": to_wandb_image(reference_image_path, "case4.pipeline.input.reference"),
+        "output_image": to_wandb_image(out_path, "case4.pipeline.output"),
+    }
+    log_wandb(
+        "case4.pipeline",
+        {**log_payload, **{k: v for k, v in wandb_images.items() if v is not None}},
+    )
     log_langfuse_trace(
         name="case4.pipeline",
         input={
@@ -141,8 +149,13 @@ def generate_image_case4_ip_adapter(
             "format_type": format_type,
             "user_image_path": user_image_path,
             "reference_image_path": reference_image_path,
+            "user_image": to_langfuse_media(user_image_path),
+            "reference_image": to_langfuse_media(reference_image_path),
         },
-        output=result,
+        output={
+            **result,
+            "output_image": to_langfuse_media(out_path),
+        },
         metadata=log_payload,
         tags=["pipeline", "case4"],
     )
