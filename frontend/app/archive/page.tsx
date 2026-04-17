@@ -31,7 +31,15 @@ function validImgSrc(url: string | null): string | null {
   return null
 }
 
-function GenerationCard({ item, onDelete }: { item: GenerationListItem; onDelete: (id: number) => void }) {
+function GenerationCard({
+  item, onDelete, selectMode = false, isSelected = false, onToggleSelect,
+}: {
+  item: GenerationListItem
+  onDelete: (id: number) => void
+  selectMode?: boolean
+  isSelected?: boolean
+  onToggleSelect?: (id: number) => void
+}) {
   const src = validImgSrc(item.generated_image_url)
   const title = item.menu_name ?? item.business_category ?? '콘텐츠'
   const [deleting, setDeleting] = useState(false)
@@ -48,27 +56,37 @@ function GenerationCard({ item, onDelete }: { item: GenerationListItem; onDelete
     }
   }
 
+  const handleClick = () => {
+    if (selectMode && onToggleSelect) onToggleSelect(item.id)
+  }
+
   return (
-    <div className="group flex flex-col gap-4 cursor-pointer">
-      <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-surface-container-low shadow-sm transition-transform duration-300 group-hover:-translate-y-1">
+    <div className="group flex flex-col gap-4 cursor-pointer" onClick={handleClick}>
+      <div className={`relative aspect-[4/5] rounded-xl overflow-hidden bg-surface-container-low shadow-sm transition-transform duration-300 ${selectMode ? '' : 'group-hover:-translate-y-1'} ${isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
         {src ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt={title} className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" />
+          <img src={src} alt={title} className={`w-full h-full object-cover transition-all duration-500 ${isSelected ? '' : 'grayscale-[0.2] group-hover:grayscale-0 group-hover:scale-105'}`} />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <span className="material-symbols-outlined text-outline/30 text-5xl">image</span>
           </div>
         )}
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="absolute top-2 right-2 w-8 h-8 bg-black/40 hover:bg-error/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 backdrop-blur-sm"
-          title="삭제"
-        >
-          <span className="material-symbols-outlined text-sm">
-            {deleting ? 'hourglass_empty' : 'delete'}
-          </span>
-        </button>
+        {selectMode ? (
+          <div className={`absolute top-2 left-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-primary border-primary' : 'bg-white/80 border-stone-300'}`}>
+            {isSelected && <span className="material-symbols-outlined text-white text-sm">check</span>}
+          </div>
+        ) : (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="absolute top-2 right-2 w-8 h-8 bg-black/40 hover:bg-error/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 backdrop-blur-sm"
+            title="삭제"
+          >
+            <span className="material-symbols-outlined text-sm">
+              {deleting ? 'hourglass_empty' : 'delete'}
+            </span>
+          </button>
+        )}
       </div>
       <div className="px-1">
         <div className="flex items-center gap-2 mb-1">
@@ -95,7 +113,11 @@ function EmptyState({ message }: { message: string }) {
   )
 }
 
-function AllTab({ query, items, loading, error, onDelete }: { query: string; items: GenerationListItem[]; loading: boolean; error: string | null; onDelete: (id: number) => void }) {
+function AllTab({ query, items, loading, error, onDelete, selectMode, selectedIds, onToggleSelect }: {
+  query: string; items: GenerationListItem[]; loading: boolean; error: string | null
+  onDelete: (id: number) => void
+  selectMode: boolean; selectedIds: Set<number>; onToggleSelect: (id: number) => void
+}) {
   const filtered = query.trim()
     ? items.filter(item =>
         (item.menu_name ?? '').toLowerCase().includes(query.toLowerCase()) ||
@@ -126,21 +148,31 @@ function AllTab({ query, items, loading, error, onDelete }: { query: string; ite
 
       {!loading && !error && filtered.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {filtered.map(item => <GenerationCard key={item.id} item={item} onDelete={onDelete} />)}
+          {filtered.map(item => (
+            <GenerationCard
+              key={item.id} item={item} onDelete={onDelete}
+              selectMode={selectMode} isSelected={selectedIds.has(item.id)} onToggleSelect={onToggleSelect}
+            />
+          ))}
         </div>
       )}
 
-      <Link
-        href="/studio"
-        className="fixed bottom-8 right-8 w-14 h-14 rounded-full cta-gradient text-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform duration-200"
-      >
-        <span className="material-symbols-outlined">add</span>
-      </Link>
+      {!selectMode && (
+        <Link
+          href="/studio"
+          className="fixed bottom-8 right-8 w-14 h-14 rounded-full cta-gradient text-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform duration-200"
+        >
+          <span className="material-symbols-outlined">add</span>
+        </Link>
+      )}
     </section>
   )
 }
 
-function MonthFolder({ name, items, onBack, onDelete }: { name: string; items: GenerationListItem[]; onBack: () => void; onDelete: (id: number) => void }) {
+function MonthFolder({ name, items, onBack, onDelete, selectMode, selectedIds, onToggleSelect }: {
+  name: string; items: GenerationListItem[]; onBack: () => void; onDelete: (id: number) => void
+  selectMode: boolean; selectedIds: Set<number>; onToggleSelect: (id: number) => void
+}) {
   return (
     <div className="p-10 flex flex-col flex-1">
       <div className="flex items-center gap-4 mb-10">
@@ -159,14 +191,22 @@ function MonthFolder({ name, items, onBack, onDelete }: { name: string; items: G
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {items.map(item => <GenerationCard key={item.id} item={item} onDelete={onDelete} />)}
+          {items.map(item => (
+            <GenerationCard
+              key={item.id} item={item} onDelete={onDelete}
+              selectMode={selectMode} isSelected={selectedIds.has(item.id)} onToggleSelect={onToggleSelect}
+            />
+          ))}
         </div>
       )}
     </div>
   )
 }
 
-function DateTab({ items, onDelete }: { items: GenerationListItem[]; onDelete: (id: number) => void }) {
+function DateTab({ items, onDelete, selectMode, selectedIds, onToggleSelect }: {
+  items: GenerationListItem[]; onDelete: (id: number) => void
+  selectMode: boolean; selectedIds: Set<number>; onToggleSelect: (id: number) => void
+}) {
   const [year, setYear] = useState(new Date().getFullYear())
   const [dateView, setDateView] = useState<DateView>('grid')
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
@@ -192,6 +232,7 @@ function DateTab({ items, onDelete }: { items: GenerationListItem[]; onDelete: (
         items={itemsForMonth(selectedMonth)}
         onBack={() => setSelectedMonth(null)}
         onDelete={onDelete}
+        selectMode={selectMode} selectedIds={selectedIds} onToggleSelect={onToggleSelect}
       />
     )
   }
@@ -372,6 +413,8 @@ export default function ArchivePage() {
   const [items, setItems] = useState<GenerationListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -389,6 +432,32 @@ export default function ArchivePage() {
   }
 
   const handleDelete = (id: number) => setItems(prev => prev.filter(i => i.id !== id))
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleSelectAll = () => setSelectedIds(new Set(items.map(i => i.id)))
+  const handleDeselectAll = () => setSelectedIds(new Set())
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`선택한 ${selectedIds.size}개를 삭제하시겠습니까?`)) return
+    await Promise.all([...selectedIds].map(id => api.generations.delete(id).catch(() => {})))
+    setItems(prev => prev.filter(i => !selectedIds.has(i.id)))
+    setSelectedIds(new Set())
+    setSelectMode(false)
+  }
+
+  const exitSelectMode = () => {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+  }
 
   return (
     <div className="flex min-h-screen bg-surface text-on-surface">
@@ -419,21 +488,57 @@ export default function ArchivePage() {
               </nav>
             </div>
 
-            <div className="flex items-center gap-4">
-              <button
-                onClick={toggleSearch}
-                className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${showSearch ? 'bg-primary text-white' : 'hover:bg-surface-container-high text-on-surface-variant'}`}
-              >
-                <span className="material-symbols-outlined">{showSearch ? 'close' : 'search'}</span>
-              </button>
-              {activeTab === '행사별' && (
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 cta-gradient text-white px-5 py-2.5 rounded-xl font-semibold shadow-sm hover:opacity-90 transition-all"
-                >
-                  <span className="material-symbols-outlined text-[20px]">add</span>
-                  <span>새 폴더</span>
-                </button>
+            <div className="flex items-center gap-3">
+              {selectMode ? (
+                <>
+                  <button
+                    onClick={selectedIds.size === items.length ? handleDeselectAll : handleSelectAll}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                  >
+                    {selectedIds.size === items.length ? '전체 해제' : '전체 선택'}
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={selectedIds.size === 0}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-error text-white text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-40"
+                  >
+                    <span className="material-symbols-outlined text-sm">delete</span>
+                    삭제 {selectedIds.size > 0 && `(${selectedIds.size}개)`}
+                  </button>
+                  <button
+                    onClick={exitSelectMode}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                  >
+                    취소
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={toggleSearch}
+                    className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${showSearch ? 'bg-primary text-white' : 'hover:bg-surface-container-high text-on-surface-variant'}`}
+                  >
+                    <span className="material-symbols-outlined">{showSearch ? 'close' : 'search'}</span>
+                  </button>
+                  {activeTab !== '행사별' && (
+                    <button
+                      onClick={() => setSelectMode(true)}
+                      className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors"
+                      title="선택"
+                    >
+                      <span className="material-symbols-outlined">checklist</span>
+                    </button>
+                  )}
+                  {activeTab === '행사별' && (
+                    <button
+                      onClick={() => setShowModal(true)}
+                      className="flex items-center gap-2 cta-gradient text-white px-5 py-2.5 rounded-xl font-semibold shadow-sm hover:opacity-90 transition-all"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">add</span>
+                      <span>새 폴더</span>
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -461,9 +566,17 @@ export default function ArchivePage() {
         </header>
 
         {activeTab === '전체' && (
-          <AllTab query={searchQuery} items={items} loading={loading} error={fetchError} onDelete={handleDelete} />
+          <AllTab
+            query={searchQuery} items={items} loading={loading} error={fetchError} onDelete={handleDelete}
+            selectMode={selectMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect}
+          />
         )}
-        {activeTab === '날짜별' && <DateTab items={items} onDelete={handleDelete} />}
+        {activeTab === '날짜별' && (
+          <DateTab
+            items={items} onDelete={handleDelete}
+            selectMode={selectMode} selectedIds={selectedIds} onToggleSelect={handleToggleSelect}
+          />
+        )}
         {activeTab === '행사별' && <EventTab onNewFolder={() => setShowModal(true)} />}
       </main>
     </div>
