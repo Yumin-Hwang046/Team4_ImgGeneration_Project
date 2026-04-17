@@ -220,7 +220,6 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
   const [uploading, setUploading] = useState(false)
   const [scheduling, setScheduling] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
-  const [uploadChannel, setUploadChannel] = useState<Channel>('instagram_feed')
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
   const imageUrl = data.generated_image_url ?? null
@@ -229,7 +228,7 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
     setUploading(true)
     setMsg(null)
     try {
-      await api.instagram.upload(data.id, uploadChannel)
+      await api.instagram.upload(data.id, 'instagram_feed')
       setMsg({ text: '인스타그램 업로드 완료!', ok: true })
     } catch (err) {
       setMsg({ text: (err as Error).message, ok: false })
@@ -271,7 +270,7 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
         <ScheduleModal
           onClose={() => setShowScheduleModal(false)}
           onConfirm={handleSchedule}
-          defaultChannel={uploadChannel}
+          defaultChannel="instagram_feed"
         />
       )}
 
@@ -396,23 +395,6 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
 
             {/* Action buttons */}
             <div className="flex flex-col gap-3">
-              {/* Upload channel toggle */}
-              <div className="flex bg-stone-100 p-1 rounded-xl">
-                {([
-                  { value: 'instagram_feed', label: '피드' },
-                  { value: 'instagram_story', label: '스토리' },
-                ] as { value: Channel; label: string }[]).map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setUploadChannel(opt.value)}
-                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                      uploadChannel === opt.value ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
               <div className="flex gap-3">
                 <button
                   onClick={handleUpload}

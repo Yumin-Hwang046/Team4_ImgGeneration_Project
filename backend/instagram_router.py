@@ -1,3 +1,4 @@
+import time
 import requests as http_requests
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -46,29 +47,65 @@ def _build_caption(generation: Generation) -> str:
     return "\n\n".join(parts)
 
 
-def _publish_media(ig_account_id: str, access_token: str, image_url: str, caption: str, channel: str) -> str:
-    """미디어 컨테이너 생성 후 게시, 게시된 미디어 ID 반환"""
-    media_type = "STORIES" if channel == "instagram_story" else None
-
-    container_params: dict = {
+def _create_media_container(
+    ig_account_id: str,
+    access_token: str,
+    image_url: str,
+    caption: str,
+    channel: str,
+) -> str:
+    """미디어 컨테이너 생성 후 creation_id 반환"""
+    params: dict = {
         "image_url": image_url,
-        "caption": caption,
         "access_token": access_token,
     }
-    if media_type:
-        container_params["media_type"] = media_type
 
-    container_res = http_requests.post(
+    # 스토리/피드 모두 IMAGE 타입으로 발행 (caption 포함)
+    # media_type=STORIES 는 앱 심사 통과 후 Meta에서 별도 활성화 필요
+    if caption:
+        params["caption"] = caption
+
+    res = http_requests.post(
         f"{GRAPH_API}/{ig_account_id}/media",
-        params=container_params,
+        params=params,
         timeout=30,
     )
-    if not container_res.ok:
+
+    if not res.ok:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Instagram 미디어 생성 실패: {container_res.json().get('error', {}).get('message', container_res.text)}",
+            detail=f"Instagram 미디어 생성 실패: {res.json().get('error', {}).get('message', res.text)}",
         )
-    creation_id = container_res.json().get("id")
+
+    return res.json().get("id")
+
+
+def _wait_for_container(creation_id: str, access_token: str, max_retries: int = 10):
+    """컨테이너 처리 완료(FINISHED)까지 폴링"""
+    for _ in range(max_retries):
+        res = http_requests.get(
+            f"{GRAPH_API}/{creation_id}",
+            params={"fields": "status_code", "access_token": access_token},
+            timeout=10,
+        )
+        if not res.ok:
+            break
+        code = res.json().get("status_code")
+        if code == "FINISHED":
+            return
+        if code == "ERROR" or code == "EXPIRED":
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Instagram 미디어 처리 실패: {code}",
+            )
+        time.sleep(2)
+    # 폴링 타임아웃 시 그냥 진행 (일부 경우 status_code 미지원)
+
+
+def _publish_media(ig_account_id: str, access_token: str, image_url: str, caption: str, channel: str) -> str:
+    """미디어 컨테이너 생성 → 처리 완료 대기 → 게시"""
+    creation_id = _create_media_container(ig_account_id, access_token, image_url, caption, channel)
+    _wait_for_container(creation_id, access_token)
 
     publish_res = http_requests.post(
         f"{GRAPH_API}/{ig_account_id}/media_publish",

@@ -45,10 +45,10 @@ def call_image_generator(
     }
     """
 
-    # ===== 현재는 mock =====
+    # ===== 현재는 mock (고정 더미 이미지 - 리다이렉트 없는 직접 JPEG URL) =====
     return {
         "success": True,
-        "image_url": "https://picsum.photos/1080/1080",
+        "image_url": "https://dummyimage.com/1080x1080/6BA4B8/FFFFFF.jpg&text=Digital+Curator",
         "prompt_used": recommended_concept,
         "error": None,
     }

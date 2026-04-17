@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from db import Base, engine
@@ -9,10 +10,20 @@ from generations import router as generations_router
 from calendar_router import router as calendar_router
 from instagram_router import router as instagram_router
 from routes.text_router import router as text_router
+from scheduler import create_scheduler
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Team4 Project Backend")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = create_scheduler()
+    scheduler.start()
+    yield
+    scheduler.shutdown()
+
+
+app = FastAPI(title="Team4 Project Backend", lifespan=lifespan)
 
 app.include_router(auth_router)
 app.include_router(generations_router)
