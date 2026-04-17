@@ -11,7 +11,8 @@ load_dotenv()
 # -----------------------------
 # ENV
 # -----------------------------
-PROJECT_ROOT = Path(os.getenv("MODEL_PROJECT_ROOT", "/home/minberry/Team4_BE"))
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(os.getenv("MODEL_PROJECT_ROOT", str(BASE_DIR.parent)))
 IMAGE_PIPELINE_SCRIPT = Path(
     os.getenv(
         "IMAGE_PIPELINE_SCRIPT",
@@ -22,8 +23,9 @@ MODEL_VENV_PYTHON = os.getenv(
     "MODEL_VENV_PYTHON",
     str(PROJECT_ROOT / ".venv" / "bin" / "python"),
 )
-GENERATED_DIR = Path(
-    os.getenv("GENERATED_IMAGE_DIR", "/home/minberry/Team4_BE/backend/generated")
+_generated_dir_raw = Path(os.getenv("GENERATED_IMAGE_DIR", "backend/generated"))
+GENERATED_DIR = (
+    _generated_dir_raw if _generated_dir_raw.is_absolute() else PROJECT_ROOT / _generated_dir_raw
 )
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
