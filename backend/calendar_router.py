@@ -1,14 +1,20 @@
 from calendar import monthrange
 from datetime import datetime, date
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-import requests
 
 from db import get_db
-from models import CalendarEvent, Generation, UploadSchedule, User
+from models import (
+    CalendarEvent,
+    Generation,
+    UploadSchedule,
+    User,
+    UserProfile,
+    WeatherDaily,
+)
 from schemas import (
     CalendarMonthResponse,
     CalendarMonthDayItem,
@@ -23,33 +29,7 @@ from schemas import (
 )
 from auth import get_current_user
 
-
 router = APIRouter(prefix="/calendar", tags=["calendar"])
-
-
-def weather_code_to_text(code: int) -> str:
-    weather_map = {
-        0: "맑음",
-        1: "대체로 맑음",
-        2: "부분적으로 흐림",
-        3: "흐림",
-        45: "안개",
-        48: "짙은 안개",
-        51: "약한 이슬비",
-        53: "보통 이슬비",
-        55: "강한 이슬비",
-        61: "약한 비",
-        63: "비",
-        65: "강한 비",
-        71: "약한 눈",
-        73: "눈",
-        75: "강한 눈",
-        80: "소나기",
-        81: "강한 소나기",
-        82: "매우 강한 소나기",
-        95: "뇌우",
-    }
-    return weather_map.get(code, "날씨 정보 없음")
 
 
 def get_seasonal_weather_fallback(target_date: date) -> str:
@@ -65,69 +45,86 @@ def get_seasonal_weather_fallback(target_date: date) -> str:
         return "겨울 예상 날씨, 추움 / 따뜻한 실내 분위기 강조"
 
 
-def is_forecast_range_available(target_date: date) -> bool:
-    today = date.today()
-    diff_days = (target_date - today).days
+def get_profile_or_404(db: Session, current_user: User) -> UserProfile:
+    profile = (
+        db.query(UserProfile)
+        .filter(UserProfile.user_id == current_user.id)
+        .first()
+    )
+    if not profile:
+        raise HTTPException(status_code=404, detail="사용자 프로필이 없습니다.")
+    return profile
 
-    # Open-Meteo Forecast API는 최대 16일 예보 범위
-    return 0 <= diff_days <= 16
+
+def get_profile_region_text(profile: UserProfile) -> str:
+    return " ".join(
+        [value for value in [profile.sido, profile.sigungu, profile.emd] if value]
+    ).strip() or profile.road_address
 
 
-def get_weather_summary_by_date(location: str, target_date: date) -> str:
-    # 먼 미래 날짜면 계절 fallback 사용
-    if not is_forecast_range_available(target_date):
-        return get_seasonal_weather_fallback(target_date)
+def get_weather_summary_from_storage(
+    db: Session,
+    profile: UserProfile,
+    target_date: date,
+) -> str:
+    row = (
+        db.query(WeatherDaily)
+        .filter(
+            WeatherDaily.user_profile_id == profile.id,
+            WeatherDaily.weather_date == target_date,
+        )
+        .first()
+    )
 
-    try:
-        geo_url = "https://geocoding-api.open-meteo.com/v1/search"
-        geo_params = {
-            "name": location,
-            "count": 1,
-            "language": "ko",
-            "format": "json",
-        }
-        geo_resp = requests.get(geo_url, params=geo_params, timeout=10)
-        geo_resp.raise_for_status()
-        geo_data = geo_resp.json()
+    if row and row.weather_summary:
+        return row.weather_summary
 
-        results = geo_data.get("results")
-        if not results:
-            return get_seasonal_weather_fallback(target_date)
+    diff_days = (target_date - date.today()).days
 
-        lat = results[0]["latitude"]
-        lon = results[0]["longitude"]
+    # 저장정책: 0~14일은 실제 예보 저장 대상
+    if 0 <= diff_days <= 14:
+        return "날씨 정보 준비중"
 
-        forecast_url = "https://api.open-meteo.com/v1/forecast"
-        forecast_params = {
-            "latitude": lat,
-            "longitude": lon,
-            "daily": "weather_code,temperature_2m_max,temperature_2m_min",
-            "timezone": "Asia/Seoul",
-            "start_date": target_date.isoformat(),
-            "end_date": target_date.isoformat(),
-            "forecast_days": 16,
-        }
-        forecast_resp = requests.get(forecast_url, params=forecast_params, timeout=10)
-        forecast_resp.raise_for_status()
-        forecast_data = forecast_resp.json()
+    # 15일 이후는 실예보 대신 계절 fallback
+    return get_seasonal_weather_fallback(target_date)
 
-        daily = forecast_data.get("daily", {})
-        codes = daily.get("weather_code", [])
-        max_temps = daily.get("temperature_2m_max", [])
-        min_temps = daily.get("temperature_2m_min", [])
 
-        if not codes:
-            return get_seasonal_weather_fallback(target_date)
+def build_event_region_query(query, profile: UserProfile):
+    conditions = []
 
-        weather_text = weather_code_to_text(codes[0])
-        max_temp = max_temps[0] if max_temps else "?"
-        min_temp = min_temps[0] if min_temps else "?"
+    # 도로명주소 기준
+    if profile.sido:
+        conditions.append(CalendarEvent.road_address.contains(profile.sido))
+    if profile.sigungu:
+        conditions.append(CalendarEvent.road_address.contains(profile.sigungu))
+    if profile.emd:
+        conditions.append(CalendarEvent.road_address.contains(profile.emd))
 
-        return f"{weather_text}, 최고 {max_temp}°C / 최저 {min_temp}°C"
+    # location 컬럼도 보조로 같이 사용
+    if profile.sido:
+        conditions.append(CalendarEvent.location.contains(profile.sido))
+    if profile.sigungu:
+        conditions.append(CalendarEvent.location.contains(profile.sigungu))
+    if profile.emd:
+        conditions.append(CalendarEvent.location.contains(profile.emd))
 
-    except Exception:
-        return get_seasonal_weather_fallback(target_date)
+    # 주소가 없거나 일부만 들어온 행사도 있으니 OR로 완화
+    if conditions:
+        query = query.filter(or_(*conditions))
 
+    return query
+
+def get_event_display_priority(event: CalendarEvent) -> int:
+    """
+    숫자가 작을수록 먼저 보여줌
+    """
+    if event.event_type == "festival":
+        return 1
+    if event.event_type == "local_event":
+        return 2
+    if event.event_type == "festival_long":
+        return 9
+    return 5
 
 def build_recommendation(
     *,
@@ -166,37 +163,31 @@ def build_recommendation(
         recommended_time = "오후 1시"
         recommended_channel = "instagram_story"
         recommended_purpose = "더위 회피 수요 유입"
-        recommended_concept = "시원한 분위기 / 청량한 비주얼 / 여름 특화 메뉴 강조"
+        recommended_concept = "시원한 실내 / 청량한 음료·메뉴 강조"
 
     elif "가을 예상 날씨" in weather_summary:
         recommended_time = "오후 4시"
         recommended_channel = "instagram_feed"
-        recommended_purpose = "감성 소비 유도"
-        recommended_concept = "가을 감성 / 따뜻한 무드 / 저녁 방문 유도"
+        recommended_purpose = "감성 방문 유도"
+        recommended_concept = "가을 감성 / 따뜻한 톤 / 분위기 강조"
 
     elif "겨울 예상 날씨" in weather_summary:
         recommended_time = "오후 5시"
-        recommended_channel = "instagram_feed"
-        recommended_purpose = "실내 체류 수요 유도"
-        recommended_concept = "겨울 감성 / 따뜻한 실내 / 온기 있는 메뉴 강조"
-
-    if "holiday" in event_types:
-        recommended_time = "오전 10시"
-        recommended_channel = "instagram_feed"
-        recommended_purpose = "공휴일 특수 수요 선점"
-        recommended_concept = "공휴일 맞춤 프로모션 / 가족·연인 고객 유입 강조"
+        recommended_channel = "instagram_story"
+        recommended_purpose = "따뜻한 실내 방문 유도"
+        recommended_concept = "겨울 감성 / 온기 / 따뜻한 메뉴 강조"
 
     if "festival" in event_types:
-        recommended_time = "오후 2시"
-        recommended_channel = "instagram_story"
-        recommended_purpose = "축제 유동 인구 유입"
-        recommended_concept = f"행사 연계 홍보 / {' / '.join(event_titles)} 분위기 반영"
+        recommended_time = "오후 3시"
+        recommended_channel = "instagram_feed"
+        recommended_purpose = "행사 유입 연계 방문 유도"
+        recommended_concept = f"지역 축제 연계 홍보 / {' / '.join(event_titles[:2])} 반영"
 
     if "local_event" in event_types:
         recommended_time = "오후 4시"
         recommended_channel = "instagram_story"
         recommended_purpose = "상권 유동 고객 즉시 유입"
-        recommended_concept = f"지역 행사 맞춤 짧은 홍보 / {' / '.join(event_titles)} 반영"
+        recommended_concept = f"지역 행사 맞춤 짧은 홍보 / {' / '.join(event_titles[:2])} 반영"
 
     return CalendarRecommendationItem(
         recommended_time=recommended_time,
@@ -210,25 +201,19 @@ def build_recommendation(
 def get_calendar_month(
     year: int = Query(..., ge=2000, le=2100),
     month: int = Query(..., ge=1, le=12),
-    location: str = Query(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    profile = get_profile_or_404(db, current_user)
     _, last_day = monthrange(year, month)
     days: List[CalendarMonthDayItem] = []
 
     for day_num in range(1, last_day + 1):
         current_date = date(year, month, day_num)
 
-        event_exists = (
-            db.query(CalendarEvent)
-            .filter(
-                CalendarEvent.event_date == current_date,
-                or_(CalendarEvent.location.is_(None), CalendarEvent.location == location),
-            )
-            .first()
-            is not None
-        )
+        event_query = db.query(CalendarEvent).filter(CalendarEvent.event_date == current_date)
+        event_query = build_event_region_query(event_query, profile)
+        event_exists = event_query.first() is not None
 
         generation_exists = (
             db.query(Generation)
@@ -252,7 +237,7 @@ def get_calendar_month(
             is not None
         )
 
-        weather_summary = get_weather_summary_by_date(location, current_date)
+        weather_summary = get_weather_summary_from_storage(db, profile, current_date)
 
         days.append(
             CalendarMonthDayItem(
@@ -270,7 +255,6 @@ def get_calendar_month(
 @router.get("/day", response_model=CalendarDayResponse)
 def get_calendar_day(
     date_str: str = Query(..., alias="date"),
-    location: str = Query(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -282,16 +266,22 @@ def get_calendar_day(
             detail="date 형식이 올바르지 않습니다. 예: 2026-05-01",
         )
 
-    weather_summary = get_weather_summary_by_date(location, target_date)
+    profile = get_profile_or_404(db, current_user)
+    location = get_profile_region_text(profile)
+    weather_summary = get_weather_summary_from_storage(db, profile, target_date)
 
-    events = (
-        db.query(CalendarEvent)
-        .filter(
-            CalendarEvent.event_date == target_date,
-            or_(CalendarEvent.location.is_(None), CalendarEvent.location == location),
-        )
-        .order_by(CalendarEvent.id.asc())
-        .all()
+    event_query = db.query(CalendarEvent).filter(CalendarEvent.event_date == target_date)
+    event_query = build_event_region_query(event_query, profile)
+    events = event_query.all()
+
+    events = sorted(
+        events,
+        key=lambda e: (
+            get_event_display_priority(e),
+            e.event_start_date or target_date,
+            e.title or "",
+            e.id,
+        ),
     )
 
     generations = (
@@ -337,10 +327,11 @@ def get_calendar_day(
 def list_calendar_events(
     year: int = Query(..., ge=2000, le=2100),
     month: int = Query(..., ge=1, le=12),
-    location: str = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    profile = get_profile_or_404(db, current_user)
+
     start_date = date(year, month, 1)
     _, last_day = monthrange(year, month)
     end_date = date(year, month, last_day)
@@ -349,11 +340,7 @@ def list_calendar_events(
         CalendarEvent.event_date >= start_date,
         CalendarEvent.event_date <= end_date,
     )
-
-    if location:
-        query = query.filter(
-            or_(CalendarEvent.location.is_(None), CalendarEvent.location == location)
-        )
+    query = build_event_region_query(query, profile)
 
     rows = query.order_by(CalendarEvent.event_date.asc(), CalendarEvent.id.asc()).all()
     return rows
@@ -371,6 +358,7 @@ def create_calendar_event(
         event_type=payload.event_type,
         location=payload.location,
         description=payload.description,
+        is_auto_collected=0,
     )
 
     db.add(new_event)

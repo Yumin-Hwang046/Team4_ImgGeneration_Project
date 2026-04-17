@@ -1,15 +1,49 @@
 from typing import Optional, List
 from datetime import datetime, date
+from decimal import Decimal
 from pydantic import BaseModel, EmailStr
 
 
 # -----------------------------
-# Auth
+# Auth / Profile
 # -----------------------------
+class UserProfileResponse(BaseModel):
+    id: int
+    store_name: str
+    business_category: str
+    road_address: str
+    jibun_address: Optional[str] = None
+    detail_address: Optional[str] = None
+    zipcode: Optional[str] = None
+    sido: Optional[str] = None
+    sigungu: Optional[str] = None
+    emd: Optional[str] = None
+    legal_code: Optional[str] = None
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
+    default_mood: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
+    store_name: str
+    business_category: str
+    road_address: str
+    jibun_address: Optional[str] = None
+    detail_address: Optional[str] = None
+    zipcode: Optional[str] = None
+    sido: Optional[str] = None
+    sigungu: Optional[str] = None
+    emd: Optional[str] = None
+    legal_code: Optional[str] = None
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
+    default_mood: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -23,6 +57,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     is_active: bool
+    profile: Optional[UserProfileResponse] = None
 
     class Config:
         from_attributes = True
@@ -66,37 +101,26 @@ class GenerationResponse(BaseModel):
         from_attributes = True
 
 
-# -----------------------------
-# Run API
-# -----------------------------
 class GenerationRunResponse(BaseModel):
     generation_id: int
     user_id: int
-
     purpose: str
     business_category: str
     menu_name: str
     location: str
     target_datetime: datetime
-
     weather_summary: str
     season_context: str
     recommended_concept: str
-
     image_mode: str
     original_image_url: Optional[str] = None
     generated_image_url: Optional[str] = None
-
     generated_copy: str
     hashtags: List[str]
-
     status: str
     created_at: datetime
 
 
-# -----------------------------
-# Generated Images
-# -----------------------------
 class GeneratedImageItem(BaseModel):
     id: int
     image_url: str
@@ -117,43 +141,31 @@ class RegenerateImageResponse(BaseModel):
     message: str
 
 
-# -----------------------------
-# Generation Detail (조회용)
-# -----------------------------
 class GenerationDetailResponse(BaseModel):
     id: int
     user_id: int
-
     purpose: Optional[str] = None
     business_category: Optional[str] = None
     menu_name: Optional[str] = None
     mood: Optional[str] = None
     location: Optional[str] = None
     target_datetime: Optional[datetime] = None
-
     extra_info: Optional[str] = None
     generated_copy: Optional[str] = None
     hashtags: Optional[List[str]] = None
-
     weather_summary: Optional[str] = None
     recommended_concept: Optional[str] = None
-
     original_image_url: Optional[str] = None
     generated_image_url: Optional[str] = None
     image_mode: Optional[str] = None
     generation_status: Optional[str] = None
-
     generated_images: Optional[List[GeneratedImageItem]] = None
-
     created_at: datetime
 
     class Config:
         from_attributes = True
 
 
-# -----------------------------
-# Generation List (보관함 목록용)
-# -----------------------------
 class GenerationListItem(BaseModel):
     id: int
     menu_name: Optional[str] = None
@@ -286,7 +298,7 @@ class InstagramSelectAccountPayload(BaseModel):
 # -----------------------------
 class InstagramUploadRequest(BaseModel):
     generation_id: int
-    channel: str  # instagram_feed / instagram_story
+    channel: str
 
 
 class InstagramUploadResponse(BaseModel):
@@ -299,7 +311,7 @@ class InstagramUploadResponse(BaseModel):
 class InstagramScheduleUploadRequest(BaseModel):
     generation_id: int
     scheduled_at: datetime
-    channel: str  # instagram_feed / instagram_story
+    channel: str
 
 
 class InstagramScheduleStatusResponse(BaseModel):
@@ -309,3 +321,31 @@ class InstagramScheduleStatusResponse(BaseModel):
     scheduled_at: datetime
     status: str
     message: str
+    
+    
+# -----------------------------
+# Region Analytics
+# -----------------------------
+class RegionAnalyticsItem(BaseModel):
+    id: int
+    user_profile_id: int
+    analysis_date: date
+    region_name: str
+    legal_code: Optional[str] = None
+    floating_population: Optional[int] = None
+    competitor_count: Optional[int] = None
+    top_categories_json: Optional[str] = None
+    summary_text: Optional[str] = None
+    source_name: Optional[str] = None
+    raw_payload: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RegionAnalyticsRefreshResponse(BaseModel):
+    message: str
+    analysis_id: int
+    region_name: str
+    source_name: str

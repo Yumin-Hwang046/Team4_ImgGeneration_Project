@@ -1,5 +1,5 @@
 import os
-from typing import Annotated
+from typing import Annotated, Optional
 
 import requests as http_requests
 from fastapi import APIRouter, Depends, HTTPException, status, Form
@@ -54,37 +54,16 @@ def get_current_user(
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def signup(
-    email: Annotated[
-        str,
-        Form(
-            ...,
-            title="아이디 (E-mail)",
-            description="회원가입에 사용할 이메일을 입력하세요."
-        )
-    ],
-    password: Annotated[
-        str,
-        Form(
-            ...,
-            title="비밀번호",
-            description="회원가입 비밀번호를 입력하세요."
-        )
-    ],
-    name: Annotated[
-        str,
-        Form(
-            ...,
-            title="이름",
-            description="사용자 이름을 입력하세요."
-        )
-    ],
+    email: Annotated[str, Form(..., title="아이디 (E-mail)")],
+    password: Annotated[str, Form(..., title="비밀번호")],
+    name: Annotated[str, Form(..., title="이름")],
     db: Session = Depends(get_db),
 ):
     existing_user = db.query(User).filter(User.email == email).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미 사용 중인 이메일입니다."
+            detail="이미 사용 중인 이메일입니다.",
         )
 
     new_user = User(
@@ -148,10 +127,9 @@ def instagram_callback(payload: InstagramCallbackPayload, db: Session = Depends(
         fb_name = me_data.get("name", "Facebook 사용자")
         fb_email = me_data.get("email") or f"fb_{fb_user_id}@facebook.local"
 
-        # 4. Instagram Business 계정 조회 (me/accounts → Business Suite 순서로 시도)
+        # 4. Instagram Business 계정 조회
         instagram_accounts = []
 
-        # 방법 1: 개인 페이지에서 조회
         pages_res = http_requests.get(
             "https://graph.facebook.com/v19.0/me/accounts",
             params={
@@ -169,7 +147,6 @@ def instagram_callback(payload: InstagramCallbackPayload, db: Session = Depends(
                     "username": ig.get("username"),
                 })
 
-        # 방법 2: Business Suite에서 조회
         if not instagram_accounts:
             biz_res = http_requests.get(
                 "https://graph.facebook.com/v19.0/me/businesses",
@@ -190,7 +167,7 @@ def instagram_callback(payload: InstagramCallbackPayload, db: Session = Depends(
         if not instagram_accounts:
             raise HTTPException(
                 status_code=400,
-                detail="연결된 Instagram Business 계정이 없습니다. Facebook 페이지에 Instagram 비즈니스 계정을 연결해주세요."
+                detail="연결된 Instagram Business 계정이 없습니다. Facebook 페이지에 Instagram 비즈니스 계정을 연결해주세요.",
             )
 
         ig_user_id = instagram_accounts[0]["id"]
@@ -199,24 +176,20 @@ def instagram_callback(payload: InstagramCallbackPayload, db: Session = Depends(
         # 5. 유저 생성 또는 조회
         user = None
 
-        # 케이스 A: 이미 로그인된 유저가 Instagram 연동 요청
         if payload.existing_token:
             try:
                 existing_payload = decode_access_token(payload.existing_token)
                 user_id = existing_payload.get("sub")
                 user = db.query(User).filter(User.id == int(user_id)).first()
             except Exception:
-                user = None  # 토큰 만료/위조 → 일반 로그인 플로우로 진행
+                user = None
 
-        # 케이스 B: 신규 로그인 (Instagram ID로 기존 유저 찾기)
         if not user:
             user = db.query(User).filter(User.instagram_user_id == ig_user_id).first()
 
-        # 케이스 C: 이메일로 기존 유저 찾기
         if not user:
             user = db.query(User).filter(User.email == ig_email).first()
 
-        # 케이스 D: 완전 신규 유저 생성
         is_new_user = False
         if not user:
             is_new_user = True
@@ -233,7 +206,6 @@ def instagram_callback(payload: InstagramCallbackPayload, db: Session = Depends(
         user.instagram_user_id = ig_user_id
         user.instagram_access_token = long_token
 
-        # Instagram 계정이 1개면 바로 저장, 2개 이상이면 선택 필요
         if len(instagram_accounts) == 1:
             user.instagram_account_id = instagram_accounts[0]["id"]
             if instagram_accounts[0].get("username"):
@@ -242,7 +214,6 @@ def instagram_callback(payload: InstagramCallbackPayload, db: Session = Depends(
         db.commit()
         db.refresh(user)
 
-        # 계정이 여러 개 → 선택 화면으로
         if len(instagram_accounts) > 1:
             selection_token = create_access_token(
                 data={"sub": str(user.id), "purpose": "ig_select"},
@@ -303,14 +274,11 @@ def login(
     if not user or not user.password_hash or not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="이메일 또는 비밀번호가 올바르지 않습니다."
+            detail="이메일 또는 비밀번호가 올바르지 않습니다.",
         )
 
     access_token = create_access_token(data={"sub": str(user.id)})
-    return {
-        "access_token": access_token,
-        "token_type": "bearer"
-    }
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.get("/me")

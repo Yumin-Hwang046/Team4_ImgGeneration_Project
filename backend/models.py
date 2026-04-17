@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Date, ForeignKey, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, Date, ForeignKey, func, DECIMAL
 from sqlalchemy.orm import relationship
 from db import Base
 
@@ -17,12 +17,56 @@ class User(Base):
 
     # Instagram / Meta OAuth
     instagram_user_id = Column(String(100), unique=True, nullable=True, index=True)
-    instagram_account_id = Column(String(100), nullable=True)    # IG Business Account ID
-    instagram_username = Column(String(100), nullable=True)      # @username
-    instagram_access_token = Column(String(500), nullable=True)  # long-lived token
+    instagram_account_id = Column(String(100), nullable=True)
+    instagram_username = Column(String(100), nullable=True)
+    instagram_access_token = Column(String(500), nullable=True)
 
+    profile = relationship(
+        "UserProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
     generations = relationship("Generation", back_populates="user")
-    upload_schedules = relationship("UploadSchedule", back_populates="user", cascade="all, delete-orphan")
+    upload_schedules = relationship(
+        "UploadSchedule",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    store_name = Column(String(255), nullable=False)
+    business_category = Column(String(100), nullable=False)
+    road_address = Column(String(255), nullable=False)
+    jibun_address = Column(String(255), nullable=True)
+    detail_address = Column(String(255), nullable=True)
+    zipcode = Column(String(20), nullable=True)
+    sido = Column(String(100), nullable=True)
+    sigungu = Column(String(100), nullable=True)
+    emd = Column(String(100), nullable=True)
+    legal_code = Column(String(20), nullable=True)
+    latitude = Column(DECIMAL(10, 7), nullable=True)
+    longitude = Column(DECIMAL(10, 7), nullable=True)
+    default_mood = Column(String(100), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="profile")
+    region_analytics = relationship(
+        "RegionAnalytics",
+        back_populates="user_profile",
+        cascade="all, delete-orphan",
+    )
+    weather_daily = relationship(
+        "WeatherDaily",
+        back_populates="user_profile",
+        cascade="all, delete-orphan",
+    )
 
 
 class Generation(Base):
@@ -91,9 +135,22 @@ class CalendarEvent(Base):
     id = Column(Integer, primary_key=True, index=True)
     event_date = Column(Date, nullable=False, index=True)
     title = Column(String(255), nullable=False)
-    event_type = Column(String(50), nullable=False)  # holiday / festival / local_event
+    event_type = Column(String(50), nullable=False)
     location = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
+
+    external_id = Column(String(100), nullable=True)
+    event_start_date = Column(Date, nullable=True)
+    event_end_date = Column(Date, nullable=True)
+    source_name = Column(String(100), nullable=True)
+    source_url = Column(String(500), nullable=True)
+    road_address = Column(String(255), nullable=True)
+    jibun_address = Column(String(255), nullable=True)
+    legal_code = Column(String(20), nullable=True)
+    latitude = Column(DECIMAL(10, 7), nullable=True)
+    longitude = Column(DECIMAL(10, 7), nullable=True)
+    is_auto_collected = Column(Integer, nullable=False, default=0)
+    last_synced_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
@@ -107,11 +164,70 @@ class UploadSchedule(Base):
     generation_id = Column(Integer, ForeignKey("generations.id", ondelete="CASCADE"), nullable=False)
 
     scheduled_at = Column(DateTime, nullable=False, index=True)
-    channel = Column(String(50), nullable=False)  # instagram_feed / instagram_story
-    status = Column(String(50), nullable=False, default="PENDING")  # PENDING / SUCCESS / FAILED / CANCELED
+    channel = Column(String(50), nullable=False)
+    status = Column(String(50), nullable=False, default="PENDING")
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="upload_schedules")
     generation = relationship("Generation", back_populates="upload_schedules")
+
+
+class RegionAnalytics(Base):
+    __tablename__ = "region_analytics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_profile_id = Column(Integer, ForeignKey("user_profiles.id", ondelete="CASCADE"), nullable=False)
+    analysis_date = Column(Date, nullable=False)
+    region_name = Column(String(255), nullable=False)
+    legal_code = Column(String(20), nullable=True)
+    floating_population = Column(Integer, nullable=True)
+    competitor_count = Column(Integer, nullable=True)
+    top_categories_json = Column(Text, nullable=True)
+    summary_text = Column(Text, nullable=True)
+    source_name = Column(String(100), nullable=True)
+    raw_payload = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user_profile = relationship("UserProfile", back_populates="region_analytics")
+
+
+class SchedulerJobLog(Base):
+    __tablename__ = "scheduler_job_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_name = Column(String(100), nullable=False)
+    job_type = Column(String(50), nullable=False)
+    target_region = Column(String(255), nullable=True)
+    run_started_at = Column(DateTime, nullable=False)
+    run_finished_at = Column(DateTime, nullable=True)
+    status = Column(String(30), nullable=False)
+    processed_count = Column(Integer, nullable=False, default=0)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class WeatherDaily(Base):
+    __tablename__ = "weather_daily"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_profile_id = Column(Integer, ForeignKey("user_profiles.id", ondelete="CASCADE"), nullable=False)
+    weather_date = Column(Date, nullable=False, index=True)
+    region_name = Column(String(255), nullable=False)
+    legal_code = Column(String(20), nullable=True)
+    latitude = Column(DECIMAL(10, 7), nullable=True)
+    longitude = Column(DECIMAL(10, 7), nullable=True)
+    weather_code = Column(Integer, nullable=True)
+    weather_summary = Column(String(255), nullable=True)
+    temp_min = Column(DECIMAL(5, 2), nullable=True)
+    temp_max = Column(DECIMAL(5, 2), nullable=True)
+    precipitation_probability = Column(DECIMAL(5, 2), nullable=True)
+    forecast_type = Column(String(30), nullable=False, default="forecast")
+    source_name = Column(String(100), nullable=True)
+    fetched_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user_profile = relationship("UserProfile", back_populates="weather_daily")

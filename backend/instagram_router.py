@@ -93,7 +93,7 @@ def _wait_for_container(creation_id: str, access_token: str, max_retries: int = 
         code = res.json().get("status_code")
         if code == "FINISHED":
             return
-        if code == "ERROR" or code == "EXPIRED":
+        if code in ("ERROR", "EXPIRED"):
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Instagram 미디어 처리 실패: {code}",
@@ -166,12 +166,18 @@ def schedule_instagram_upload(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    🔧 실연동 시:
-    - Meta 예약 API 또는 자체 스케줄러 연결
-    """
-
     channel = validate_channel(payload.channel)
+
+    generation = (
+        db.query(Generation)
+        .filter(
+            Generation.id == payload.generation_id,
+            Generation.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not generation:
+        raise HTTPException(status_code=404, detail="Generation not found")
 
     new_schedule = UploadSchedule(
         user_id=current_user.id,
@@ -191,7 +197,7 @@ def schedule_instagram_upload(
         channel=new_schedule.channel,
         scheduled_at=new_schedule.scheduled_at,
         status=new_schedule.status,
-        message="예약 등록 완료 (mock)",
+        message="예약 등록 완료",
     )
 
 
@@ -204,7 +210,14 @@ def get_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    row = db.query(UploadSchedule).filter(UploadSchedule.id == schedule_id).first()
+    row = (
+        db.query(UploadSchedule)
+        .filter(
+            UploadSchedule.id == schedule_id,
+            UploadSchedule.user_id == current_user.id,
+        )
+        .first()
+    )
 
     if not row:
         raise HTTPException(status_code=404, detail="Not found")

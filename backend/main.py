@@ -9,7 +9,6 @@ from auth import router as auth_router
 from generations import router as generations_router
 from calendar_router import router as calendar_router
 from instagram_router import router as instagram_router
-from routes.text_router import router as text_router
 from scheduler import create_scheduler
 
 Base.metadata.create_all(bind=engine)
@@ -29,13 +28,35 @@ app.include_router(auth_router)
 app.include_router(generations_router)
 app.include_router(calendar_router)
 app.include_router(instagram_router)
-app.include_router(text_router)
 
-# image_router는 GPU 환경(VM)에서만 로드됩니다.
-# torch/diffusers가 설치된 환경에서만 /image/case4 엔드포인트가 활성화됩니다.
+# dev 브랜치 신규 라우터 (존재하는 경우에만 로드)
+try:
+    from routes.text_router import router as text_router
+    app.include_router(text_router)
+except ImportError:
+    pass
+
 try:
     from routes.image_router import router as image_router
     app.include_router(image_router)
+except ImportError:
+    pass
+
+try:
+    from analytics_router import router as analytics_router
+    app.include_router(analytics_router)
+except ImportError:
+    pass
+
+try:
+    from scheduler_router import router as scheduler_router
+    app.include_router(scheduler_router)
+except ImportError:
+    pass
+
+try:
+    from integrations_router import router as integrations_router
+    app.include_router(integrations_router)
 except ImportError:
     pass
 
