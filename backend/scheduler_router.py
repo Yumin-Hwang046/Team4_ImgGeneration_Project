@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from backend.scheduler_service import (
+from scheduler_service import (
     get_scheduler_status,
     run_festival_sync_job,
     run_region_analytics_refresh_job,

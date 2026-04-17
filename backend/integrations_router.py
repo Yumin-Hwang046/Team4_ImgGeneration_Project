@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from backend.db import get_db
-from backend.auth import get_current_user
-from backend.models import User, UserProfile
-from backend.weather_service import fetch_daily_weather_rows_for_profile
-from backend.festival_service import build_festival_debug_result
-from backend.analytics_service import build_region_analytics_result
+from db import get_db
+from auth import get_current_user
+from models import User, UserProfile
+from weather_service import fetch_daily_weather_rows_for_profile
+from festival_service import build_festival_debug_result
+from analytics_service import build_region_analytics_result
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 

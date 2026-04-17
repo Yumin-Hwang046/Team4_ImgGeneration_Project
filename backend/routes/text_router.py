@@ -3,7 +3,7 @@ from typing import Optional, List
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from backend.text_generator.generator import generate_marketing_copy
+from text_generator.generator import generate_marketing_copy
 
 
 router = APIRouter(prefix="/text", tags=["text"])

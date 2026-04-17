@@ -266,6 +266,34 @@ class CalendarDayResponse(BaseModel):
 
 
 # -----------------------------
+# Instagram OAuth
+# -----------------------------
+class InstagramCallbackPayload(BaseModel):
+    code: str
+    existing_token: Optional[str] = None  # 이미 로그인된 유저가 인스타 연동 시 전달
+
+
+class InstagramAccountOption(BaseModel):
+    id: str
+    name: str
+    username: Optional[str] = None
+
+
+class InstagramCallbackResponse(BaseModel):
+    token: Optional[str] = None
+    needs_selection: bool = False
+    is_new_user: bool = False           # True면 온보딩으로 라우팅
+    selection_token: Optional[str] = None
+    accounts: Optional[List[InstagramAccountOption]] = None
+
+
+class InstagramSelectAccountPayload(BaseModel):
+    selection_token: str
+    account_id: str
+    account_name: str
+
+
+# -----------------------------
 # Instagram
 # -----------------------------
 class InstagramUploadRequest(BaseModel):

@@ -15,9 +15,11 @@ type Channel = 'instagram_feed' | 'instagram_story'
 function ScheduleModal({
   onClose,
   onConfirm,
+  defaultChannel = 'instagram_feed',
 }: {
   onClose: () => void
   onConfirm: (scheduledAt: string, channel: Channel) => void
+  defaultChannel?: Channel
 }) {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
@@ -26,7 +28,7 @@ function ScheduleModal({
   const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM')
   const [hour, setHour] = useState(10)
   const [minute, setMinute] = useState(0)
-  const [channel, setChannel] = useState<Channel>('instagram_feed')
+  const [channel, setChannel] = useState<Channel>(defaultChannel)
 
   const MONTH_LABELS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
   const DAY_LABELS = ['Su','Mo','Tu','We','Th','Fr','Sa']
@@ -218,7 +220,6 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
   const [uploading, setUploading] = useState(false)
   const [scheduling, setScheduling] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
-  const [uploadChannel, setUploadChannel] = useState<Channel>('instagram_feed')
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
   const imageUrl = data.generated_image_url ?? null
@@ -227,7 +228,7 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
     setUploading(true)
     setMsg(null)
     try {
-      await api.instagram.upload(data.id, uploadChannel)
+      await api.instagram.upload(data.id, 'instagram_feed')
       setMsg({ text: '인스타그램 업로드 완료!', ok: true })
     } catch (err) {
       setMsg({ text: (err as Error).message, ok: false })
@@ -269,6 +270,7 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
         <ScheduleModal
           onClose={() => setShowScheduleModal(false)}
           onConfirm={handleSchedule}
+          defaultChannel="instagram_feed"
         />
       )}
 
@@ -393,23 +395,6 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
 
             {/* Action buttons */}
             <div className="flex flex-col gap-3">
-              {/* Upload channel toggle */}
-              <div className="flex bg-stone-100 p-1 rounded-xl">
-                {([
-                  { value: 'instagram_feed', label: '피드' },
-                  { value: 'instagram_story', label: '스토리' },
-                ] as { value: Channel; label: string }[]).map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setUploadChannel(opt.value)}
-                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                      uploadChannel === opt.value ? 'bg-white text-on-surface shadow-sm' : 'text-on-surface-variant'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
               <div className="flex gap-3">
                 <button
                   onClick={handleUpload}

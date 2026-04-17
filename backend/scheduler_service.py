@@ -4,10 +4,10 @@ from typing import Dict, Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from backend.db import SessionLocal
-from backend.models import SchedulerJobLog, UserProfile, CalendarEvent, WeatherDaily
-from backend.festival_service import build_festival_event_rows_for_profile
-from backend.weather_service import fetch_daily_weather_rows_for_profile
+from db import SessionLocal
+from models import SchedulerJobLog, UserProfile, CalendarEvent, WeatherDaily
+from festival_service import build_festival_event_rows_for_profile
+from weather_service import fetch_daily_weather_rows_for_profile
 
 scheduler = BackgroundScheduler(timezone="Asia/Seoul")
 

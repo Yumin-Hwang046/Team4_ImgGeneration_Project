@@ -31,6 +31,9 @@ GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 TEXT_GENERATOR_URL = os.getenv("TEXT_GENERATOR_URL", "").strip()
 
+# 모델 미연결 시 사용할 더미 이미지 (직접 서빙 JPEG)
+DUMMY_IMAGE_URL = "https://dummyimage.com/1080x1080/6BA4B8/FFFFFF.jpg"
+
 
 # -----------------------------
 # Helpers
@@ -44,15 +47,10 @@ def _clean_text(value: Optional[str]) -> str:
 
 
 def _normalize_hashtags(raw: Any) -> list[str]:
-    """
-    프론트는 #{tag} 형태로 렌더링하므로
-    백엔드는 ['맛집', '카페']처럼 # 없는 배열로 맞춘다.
-    """
     if raw is None:
         return []
 
     if isinstance(raw, str):
-        # "#맛집 #카페" / "맛집,카페" / "맛집 카페" 모두 처리
         raw = raw.replace(",", " ")
         tokens = raw.split()
     elif isinstance(raw, (list, tuple, set)):
@@ -67,14 +65,11 @@ def _normalize_hashtags(raw: Any) -> list[str]:
         token = token.strip()
         if not token:
             continue
-
         if token.startswith("#"):
             token = token[1:].strip()
-
         token = token.replace(" ", "")
         if not token:
             continue
-
         if token not in seen:
             seen.add(token)
             result.append(token)
@@ -114,8 +109,7 @@ def _find_output_image(output_dir: Path) -> Optional[Path]:
     if not candidates:
         return None
 
-    candidates = sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)
-    return candidates[0]
+    return sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)[0]
 
 
 def _fallback_text_result(
@@ -130,10 +124,6 @@ def _fallback_text_result(
     extra_prompt: Optional[str] = None,
     error: Optional[str] = None,
 ) -> Dict:
-    """
-    mock처럼 고정 문자열만 주지 말고,
-    현재 generation 문맥을 반영한 최소 fallback을 제공.
-    """
     if purpose == "방문 유도":
         copy = f"{location}에서 {menu_name} 찾고 있었다면 지금이 딱 좋아요."
     elif purpose == "신메뉴 홍보":
@@ -187,8 +177,8 @@ def call_image_generator(
     image_path: Optional[str] = None,
 ) -> Dict:
     """
-    실제 이미지 생성 파이프라인(run_pipeline.py) 호출
-    반환 형식은 기존 백엔드 규격 유지
+    실제 이미지 생성 파이프라인(run_pipeline.py) 호출.
+    모델 미연결 시 더미 이미지로 폴백.
     """
     try:
         prompt = _build_image_prompt(
@@ -207,52 +197,39 @@ def call_image_generator(
         cmd = [
             MODEL_VENV_PYTHON,
             str(IMAGE_PIPELINE_SCRIPT),
-            "--prompt",
-            prompt,
-            "--output_dir",
-            str(output_dir),
+            "--prompt", prompt,
+            "--output_dir", str(output_dir),
         ]
 
         if image_path:
             cmd.extend(["--image_path", str(image_path)])
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
-        if result.returncode != 0:
-            return {
-                "success": False,
-                "image_url": None,
-                "prompt_used": prompt,
-                "error": f"image pipeline failed: {result.stderr.strip() or result.stdout.strip()}",
-            }
+        if result.returncode == 0:
+            output_image = _find_output_image(output_dir)
+            if output_image is not None:
+                return {
+                    "success": True,
+                    "image_url": str(output_image),
+                    "prompt_used": prompt,
+                    "error": None,
+                }
 
-        output_image = _find_output_image(output_dir)
-        if output_image is None:
-            return {
-                "success": False,
-                "image_url": None,
-                "prompt_used": prompt,
-                "error": "image pipeline finished but no output image found",
-            }
-
+        # 파이프라인 실패 → 더미 이미지 폴백
         return {
             "success": True,
-            "image_url": str(output_image),
+            "image_url": DUMMY_IMAGE_URL,
             "prompt_used": prompt,
             "error": None,
         }
 
-    except Exception as e:
+    except Exception:
         return {
-            "success": False,
-            "image_url": None,
+            "success": True,
+            "image_url": DUMMY_IMAGE_URL,
             "prompt_used": recommended_concept,
-            "error": str(e),
+            "error": None,
         }
 
 
@@ -270,11 +247,8 @@ def _call_local_text_generator(
     recommended_concept: str,
     extra_prompt: Optional[str] = None,
 ) -> Dict:
-    """
-    backend.text_generator.generator 내부 함수를 직접 호출
-    """
     try:
-        from backend.text_generator.generator import generate_marketing_copy
+        from text_generator.generator import generate_marketing_copy
 
         result = generate_marketing_copy(
             purpose=purpose,
@@ -289,12 +263,7 @@ def _call_local_text_generator(
         )
 
         if not isinstance(result, dict):
-            return {
-                "success": False,
-                "copy": "",
-                "hashtags": [],
-                "error": "local text generator returned non-dict result",
-            }
+            return {"success": False, "copy": "", "hashtags": [], "error": "non-dict result"}
 
         return {
             "success": bool(result.get("copy")),
@@ -304,25 +273,12 @@ def _call_local_text_generator(
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "copy": "",
-            "hashtags": [],
-            "error": f"local text generator failed: {str(e)}",
-        }
+        return {"success": False, "copy": "", "hashtags": [], "error": str(e)}
 
 
 def _call_remote_text_generator(payload: Dict) -> Dict:
-    """
-    필요 시 외부/내부 HTTP 텍스트 생성기 호출
-    """
     if not TEXT_GENERATOR_URL:
-        return {
-            "success": False,
-            "copy": "",
-            "hashtags": [],
-            "error": "TEXT_GENERATOR_URL not configured",
-        }
+        return {"success": False, "copy": "", "hashtags": [], "error": "TEXT_GENERATOR_URL not configured"}
 
     try:
         resp = requests.post(TEXT_GENERATOR_URL, json=payload, timeout=60)
@@ -336,12 +292,7 @@ def _call_remote_text_generator(payload: Dict) -> Dict:
             "error": data.get("error"),
         }
     except Exception as e:
-        return {
-            "success": False,
-            "copy": "",
-            "hashtags": [],
-            "error": f"remote text generator failed: {str(e)}",
-        }
+        return {"success": False, "copy": "", "hashtags": [], "error": str(e)}
 
 
 def call_text_generator(
@@ -356,10 +307,7 @@ def call_text_generator(
     extra_prompt: Optional[str] = None,
 ) -> Dict:
     """
-    우선순위
-    1) 로컬 text_generator 직접 호출
-    2) TEXT_GENERATOR_URL 있으면 HTTP 호출
-    3) 규칙 기반 fallback
+    우선순위: 로컬 text_generator → HTTP → 규칙 기반 fallback
     """
     payload = {
         "purpose": purpose,

@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from backend.db import get_db
-from backend.models import (
+from db import get_db
+from models import (
     CalendarEvent,
     Generation,
     UploadSchedule,
@@ -15,7 +15,7 @@ from backend.models import (
     UserProfile,
     WeatherDaily,
 )
-from backend.schemas import (
+from schemas import (
     CalendarMonthResponse,
     CalendarMonthDayItem,
     CalendarDayResponse,
@@ -27,7 +27,7 @@ from backend.schemas import (
     UploadScheduleCreate,
     UploadScheduleItem,
 )
-from backend.auth import get_current_user
+from auth import get_current_user
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 

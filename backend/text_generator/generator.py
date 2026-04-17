@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from backend.text_generator.prompt_templates import get_full_prompt
+from text_generator.prompt_templates import get_full_prompt
 
 load_dotenv()
 

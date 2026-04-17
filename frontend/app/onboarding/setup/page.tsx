@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { setStoredLocation, setStoredCategory, setStoredStoreName, setStoredAdmCd, setStoredDongName } from '@/lib/auth'
+import { setStoredLocation, setStoredCategory, setStoredStoreName, setStoredAdmCd, setStoredDongName, setStoredLat, setStoredLng } from '@/lib/auth'
 import AddressSearch from '@/components/AddressSearch'
 
 const CATEGORY_OPTIONS = [
@@ -21,14 +21,18 @@ export default function SetupPage() {
   const [category, setCategory] = useState('')
   const [location, setLocation] = useState('')
   const [admCd, setAdmCd] = useState('')
+  const [lat, setLat] = useState('')
+  const [lng, setLng] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const [dongName, setDongName] = useState('')
 
-  const handleAddressChange = (address: string, code: string, dong: string) => {
+  const handleAddressChange = (address: string, code: string, dong: string, coordLat: string, coordLng: string) => {
     setLocation(address)
     setAdmCd(code)
     setDongName(dong)
+    setLat(coordLat)
+    setLng(coordLng)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -53,6 +57,8 @@ export default function SetupPage() {
     setStoredLocation(location.trim())
     if (admCd) setStoredAdmCd(admCd)
     if (dongName) setStoredDongName(dongName)
+    if (lat) setStoredLat(lat)
+    if (lng) setStoredLng(lng)
 
     router.push('/onboarding/confirm')
   }

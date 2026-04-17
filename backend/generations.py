@@ -9,9 +9,9 @@ import requests
 from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from backend.db import get_db, SessionLocal
-from backend.models import Generation, GeneratedImage, User, UserProfile, WeatherDaily
-from backend.schemas import (
+from db import get_db, SessionLocal
+from models import Generation, GeneratedImage, User, UserProfile, WeatherDaily
+from schemas import (
     GenerationCreate,
     GenerationUpdate,
     GenerationResponse,
@@ -20,9 +20,9 @@ from backend.schemas import (
     GeneratedImageItem,
     RegenerateImageResponse,
 )
-from backend.auth import get_current_user
-from backend.ai_adapter import normalize_image_result, normalize_text_result
-from backend.ai_clients import call_image_generator, call_text_generator
+from auth import get_current_user
+from ai_adapter import normalize_image_result, normalize_text_result
+from ai_clients import call_image_generator, call_text_generator
 
 
 router = APIRouter(prefix="/generations", tags=["generations"])

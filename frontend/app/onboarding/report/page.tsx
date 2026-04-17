@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { getStoredAdmCd, getStoredLocation, getStoredDongName } from '@/lib/auth'
+import { getStoredAdmCd, getStoredLocation, getStoredDongName, getStoredLat, getStoredLng, getStoredCategory } from '@/lib/auth'
 
 const personas = [
   {
@@ -54,6 +54,11 @@ interface StoreRank {
   pct: number
 }
 
+interface PersonaReasons {
+  rank1: string | null
+  rank2: string | null
+}
+
 interface CommercialData {
   demographics: {
     top3: DemoRank[]
@@ -63,6 +68,7 @@ interface CommercialData {
   storeTop3: StoreRank[] | null
   total: number
   recommendedPersonas: number[]
+  personaReasons: PersonaReasons | null
   strategyText: string | null
   keyInsight: string | null
 }
@@ -75,13 +81,20 @@ export default function ReportPage() {
   const location = getStoredLocation()
 
   useEffect(() => {
-    const admCd = getStoredAdmCd()
-    const dong = getStoredDongName()
-    if (!admCd && !dong) { setLoading(false); return }
+    const admCd    = getStoredAdmCd()
+    const dong     = getStoredDongName()
+    const lat      = getStoredLat()
+    const lng      = getStoredLng()
+    const category = getStoredCategory()
+
+    if (!admCd && !dong && !lat) { setLoading(false); return }
 
     const params = new URLSearchParams()
-    if (admCd) params.set('admCd', admCd)
-    if (dong) params.set('dong', dong)
+    if (admCd)    params.set('admCd', admCd)
+    if (dong)     params.set('dong', dong)
+    if (lat)      params.set('lat', lat)
+    if (lng)      params.set('lng', lng)
+    if (category) params.set('category', category)
 
     fetch(`/api/commercial?${params}`)
       .then(res => res.json())
@@ -274,13 +287,20 @@ export default function ReportPage() {
                   }`}
                 >
                   {isRec && (
-                    <div className="flex items-center gap-2 mb-3 px-1">
-                      <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
-                        {recRank + 1}
-                      </span>
-                      <span className="text-xs font-bold text-primary uppercase tracking-widest">
-                        {recRank === 0 ? 'AI 최우선 추천' : 'AI 추천'}
-                      </span>
+                    <div className="mb-3 px-1">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold shrink-0">
+                          {recRank + 1}
+                        </span>
+                        <span className="text-xs font-bold text-primary uppercase tracking-widest">
+                          {recRank === 0 ? 'AI 최우선 추천' : 'AI 추천'}
+                        </span>
+                      </div>
+                      {data?.personaReasons && (
+                        <p className="text-xs text-on-surface-variant leading-relaxed pl-8">
+                          {recRank === 0 ? data.personaReasons.rank1 : data.personaReasons.rank2}
+                        </p>
+                      )}
                     </div>
                   )}
                   <div className={`relative aspect-[4/5] rounded-xl overflow-hidden mb-6 ${p.bg}`}>

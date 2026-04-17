@@ -27,9 +27,16 @@ declare global {
 
 interface Props {
   value: string
-  onChange: (address: string, admCd: string, dongName: string) => void
+  onChange: (address: string, admCd: string, dongName: string, lat: string, lng: string) => void
   placeholder?: string
   className?: string
+}
+
+interface AddressResult {
+  admCd: string
+  lat: string
+  lng: string
+  dongNm: string
 }
 
 function loadDaumScript(): Promise<void> {
@@ -42,15 +49,21 @@ function loadDaumScript(): Promise<void> {
   })
 }
 
-// 번지까지 포함된 지번주소로 검색해야 h_code가 정확히 반환됨
-async function fetchAdmCd(jibunAddress: string): Promise<string> {
-  if (!jibunAddress) return ''
+// 행정동코드 + 좌표 + 정확한 행정동명을 함께 반환
+async function fetchAddressData(jibunAddress: string): Promise<AddressResult> {
+  const empty = { admCd: '', lat: '', lng: '', dongNm: '' }
+  if (!jibunAddress) return empty
   try {
     const res = await fetch(`/api/address?query=${encodeURIComponent(jibunAddress)}`)
     const data = await res.json()
-    return data.documents?.[0]?.address?.h_code ?? ''
+    return {
+      admCd: data.documents?.[0]?.address?.h_code ?? '',
+      lat: data.coords?.lat ?? '',
+      lng: data.coords?.lng ?? '',
+      dongNm: data.dongNm ?? '',
+    }
   } catch {
-    return ''
+    return empty
   }
 }
 
@@ -63,10 +76,11 @@ export default function AddressSearch({ value, onChange, placeholder, className 
   const handleComplete = useCallback(async (data: DaumPostcodeData) => {
     const address = data.roadAddress || data.jibunAddress
     const jibun = data.jibunAddress || data.autoJibunAddress
-    const dongName = data.hname || data.bname
     setOpen(false)
-    const admCd = await fetchAdmCd(jibun)
-    onChangeRef.current(address, admCd, dongName)
+    const result = await fetchAddressData(jibun)
+    // coord2regioncode에서 가져온 정확한 행정동명 사용 (서울 API 매칭용)
+    const dongName = result.dongNm || data.hname || data.bname
+    onChangeRef.current(address, result.admCd, dongName, result.lat, result.lng)
   }, [])
 
   useEffect(() => {

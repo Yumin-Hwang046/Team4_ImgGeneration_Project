@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from backend.db import get_db
-from backend.models import User, UserProfile, RegionAnalytics
-from backend.schemas import RegionAnalyticsItem, RegionAnalyticsRefreshResponse
-from backend.auth import get_current_user
-from backend.analytics_service import build_region_analytics_result
+from db import get_db
+from models import User, UserProfile, RegionAnalytics
+from schemas import RegionAnalyticsItem, RegionAnalyticsRefreshResponse
+from auth import get_current_user
+from analytics_service import build_region_analytics_result
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
