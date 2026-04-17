@@ -1,8 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-
-from image_generator.case4_ip_adapter import generate_image_case4_ip_adapter
 
 router = APIRouter(prefix="/image", tags=["image"])
 
@@ -20,6 +18,15 @@ class Case4Request(BaseModel):
 
 @router.post("/case4")
 def case4(req: Case4Request):
+    try:
+        from image_generator.case4_ip_adapter import generate_image_case4_ip_adapter
+    except ImportError as e:
+        missing = getattr(e, "name", "dependency")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Case4 dependency is missing: {missing}. Install model dependencies first.",
+        )
+
     return generate_image_case4_ip_adapter(
         user_image_path=req.user_image_path,
         reference_image_path=req.reference_image_path,

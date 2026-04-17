@@ -27,7 +27,7 @@ from ai_clients import call_image_generator, call_text_generator
 
 router = APIRouter(prefix="/generations", tags=["generations"])
 
-BASE_DIR = Path("/home/minberry/Team4_BE/backend")
+BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 GENERATED_DIR = BASE_DIR / "generated"
 
