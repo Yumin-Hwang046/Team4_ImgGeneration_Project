@@ -1,13 +1,16 @@
 import json
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, List
+from pathlib import Path
+from urllib.parse import quote
+import shutil
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from backend.db import get_db, SessionLocal
-from backend.models import Generation, GeneratedImage, User
+from backend.models import Generation, GeneratedImage, User, UserProfile, WeatherDaily
 from backend.schemas import (
     GenerationCreate,
     GenerationUpdate,
@@ -23,6 +26,39 @@ from backend.ai_clients import call_image_generator, call_text_generator
 
 
 router = APIRouter(prefix="/generations", tags=["generations"])
+
+BASE_DIR = Path("/home/minberry/Team4_BE/backend")
+UPLOAD_DIR = BASE_DIR / "uploads"
+GENERATED_DIR = BASE_DIR / "generated"
+
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def to_public_media_url(path_str: Optional[str]) -> Optional[str]:
+    if not path_str:
+        return None
+
+    path = Path(path_str)
+
+    try:
+        resolved = path.resolve()
+    except Exception:
+        return path_str
+
+    try:
+        rel = resolved.relative_to(GENERATED_DIR.resolve())
+        return f"/media/generated/{quote(rel.as_posix())}"
+    except Exception:
+        pass
+
+    try:
+        rel = resolved.relative_to(UPLOAD_DIR.resolve())
+        return f"/media/uploads/{quote(rel.as_posix())}"
+    except Exception:
+        pass
+
+    return path_str
 
 
 def parse_target_datetime(date_str: str, time_str: Optional[str]) -> datetime:
@@ -88,6 +124,102 @@ def geocode_location(location: str) -> tuple[float, float]:
     lat = results[0]["latitude"]
     lon = results[0]["longitude"]
     return lat, lon
+
+
+def get_seasonal_weather_fallback(target_dt: datetime) -> str:
+    month = target_dt.month
+
+    if month in [3, 4, 5]:
+        return "봄 예상 날씨, 온화함 / 야외활동 적합"
+    if month in [6, 7, 8]:
+        return "여름 예상 날씨, 더움 / 시원한 실내 수요 증가"
+    if month in [9, 10, 11]:
+        return "가을 예상 날씨, 선선함 / 감성 마케팅 적합"
+    return "겨울 예상 날씨, 추움 / 따뜻한 실내 분위기 강조"
+
+
+def get_profile_region_text(profile: UserProfile) -> str:
+    return " ".join(
+        [value for value in [profile.sido, profile.sigungu, profile.emd] if value]
+    ).strip() or profile.road_address
+
+
+def looks_like_invalid_location(location: Optional[str]) -> bool:
+    value = (location or "").strip()
+    if not value:
+        return True
+
+    mood_like_values = {
+        "sunny", "cloudy", "rainy", "warm",
+        "맑은 날씨", "흐린 날씨", "비 오는 배경", "따뜻한 조명", "따뜻한 감성",
+    }
+    return value in mood_like_values
+
+
+def resolve_generation_location(db: Session, user_id: int, requested_location: Optional[str]) -> str:
+    requested_location = (requested_location or "").strip()
+
+    if requested_location and not looks_like_invalid_location(requested_location):
+        return requested_location
+
+    profile = (
+        db.query(UserProfile)
+        .filter(UserProfile.user_id == user_id)
+        .first()
+    )
+    if profile:
+        return get_profile_region_text(profile)
+
+    return requested_location or "서울"
+
+
+def get_weather_summary_from_storage_for_generation(
+    db: Session,
+    user_id: int,
+    target_dt: datetime,
+) -> Optional[str]:
+    profile = (
+        db.query(UserProfile)
+        .filter(UserProfile.user_id == user_id)
+        .first()
+    )
+    if not profile:
+        return None
+
+    row = (
+        db.query(WeatherDaily)
+        .filter(
+            WeatherDaily.user_profile_id == profile.id,
+            WeatherDaily.weather_date == target_dt.date(),
+        )
+        .first()
+    )
+
+    if row and row.weather_summary:
+        return row.weather_summary
+
+    return None
+
+
+def get_weather_summary_for_generation(
+    db: Session,
+    user_id: int,
+    location: str,
+    target_dt: datetime,
+) -> str:
+    stored_summary = get_weather_summary_from_storage_for_generation(
+        db=db,
+        user_id=user_id,
+        target_dt=target_dt,
+    )
+    if stored_summary:
+        return stored_summary
+
+    live_summary = get_weather_summary(location, target_dt)
+    if "날씨 조회 실패" not in live_summary:
+        return live_summary
+
+    return get_seasonal_weather_fallback(target_dt)
 
 
 def get_weather_summary(location: str, target_dt: datetime) -> str:
@@ -205,7 +337,20 @@ def process_generation_task(
             return
 
         target_dt = parse_target_datetime(target_date, target_time)
-        weather_summary = get_weather_summary(location, target_dt)
+
+        resolved_location = resolve_generation_location(
+            db=db,
+            user_id=generation.user_id,
+            requested_location=location,
+        )
+
+        weather_summary = get_weather_summary_for_generation(
+            db=db,
+            user_id=generation.user_id,
+            location=resolved_location,
+            target_dt=target_dt,
+        )
+
         season_context = get_season_context(target_dt)
 
         recommended_concept = recommend_concept(
@@ -222,7 +367,7 @@ def process_generation_task(
         source_image_path = None
 
         if uploaded_filename:
-            original_image_url = f"https://dummy.local/uploads/{uploaded_filename}"
+            original_image_url = to_public_media_url(uploaded_filename)
             source_image_path = uploaded_filename
             image_mode = "uploaded_and_analyzed"
             extra_info = f"[IMAGE_ANALYSIS] 업로드 이미지 분석 완료: {uploaded_filename}\n[USER_PROMPT] {extra_prompt or ''}"
@@ -233,7 +378,7 @@ def process_generation_task(
         raw_image_result = call_image_generator(
             business_category=business_category,
             menu_name=menu_name,
-            location=location,
+            location=resolved_location,
             mood=mood,
             recommended_concept=recommended_concept,
             extra_prompt=extra_prompt,
@@ -243,17 +388,22 @@ def process_generation_task(
 
         if not image_result["success"]:
             generation.generation_status = "FAILED"
-            generation.extra_info = (generation.extra_info or "") + "\n[ERROR] 이미지 처리 실패"
+            generation.extra_info = (
+                (generation.extra_info or "")
+                + "\n[ERROR] 이미지 처리 실패"
+                + f"\n[DETAIL] {image_result.get('error')}"
+            )
+            print("[GENERATION][IMAGE][FAIL]", image_result)
             db.commit()
             return
 
-        generated_image_url = image_result["image_url"]
+        generated_image_url = to_public_media_url(image_result["image_url"])
 
         raw_text_result = call_text_generator(
             purpose=purpose,
             business_category=business_category,
             menu_name=menu_name,
-            location=location,
+            location=resolved_location,
             mood=mood,
             weather_summary=weather_summary,
             season_context=season_context,
@@ -264,7 +414,12 @@ def process_generation_task(
 
         if not text_result["success"]:
             generation.generation_status = "FAILED"
-            generation.extra_info = (generation.extra_info or "") + "\n[ERROR] 문구 생성 실패"
+            generation.extra_info = (
+                (generation.extra_info or "")
+                + "\n[ERROR] 문구 생성 실패"
+                + f"\n[DETAIL] {text_result.get('error')}"
+            )
+            print("[GENERATION][TEXT][FAIL]", text_result)
             db.commit()
             return
 
@@ -277,7 +432,7 @@ def process_generation_task(
         generation.business_category = business_category
         generation.menu_name = menu_name
         generation.mood = mood
-        generation.location = location
+        generation.location = resolved_location
         generation.target_datetime = target_dt
         generation.extra_info = extra_info
         generation.generated_copy = generated_copy
@@ -345,10 +500,11 @@ def process_regenerate_task(generation_id: int):
             return
 
         version_no = get_next_version_no(db, generation.id)
+        public_image_url = to_public_media_url(image_result["image_url"])
 
         new_image = GeneratedImage(
             generation_id=generation.id,
-            image_url=image_result["image_url"],
+            image_url=public_image_url,
             final_image_url=None,
             prompt_used=image_result.get("prompt_used") or recommended_concept,
             version_no=version_no,
@@ -356,7 +512,7 @@ def process_regenerate_task(generation_id: int):
             status="SUCCESS",
         )
 
-        generation.generated_image_url = image_result["image_url"]
+        generation.generated_image_url = public_image_url
         generation.generation_status = "SUCCESS"
 
         db.add(new_image)
@@ -528,7 +684,10 @@ async def run_generation(
 
     uploaded_filename = None
     if image_file is not None and getattr(image_file, "filename", ""):
-        uploaded_filename = image_file.filename
+        saved_path = UPLOAD_DIR / image_file.filename
+        with open(saved_path, "wb") as buffer:
+            shutil.copyfileobj(image_file.file, buffer)
+        uploaded_filename = str(saved_path)
 
     generation = Generation(
         user_id=current_user.id,
