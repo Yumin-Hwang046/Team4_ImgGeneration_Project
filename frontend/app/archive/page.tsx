@@ -26,10 +26,15 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
+const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+
 function validImgSrc(url: string | null): string | null {
-  if (url && (url.startsWith('http://') || url.startsWith('https://'))) return url
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  if (url.startsWith('/media/')) return `${BACKEND_ORIGIN}${url}`
   return null
 }
+
 
 function GenerationCard({ item, onDelete }: { item: GenerationListItem; onDelete: (id: number) => void }) {
   const src = validImgSrc(item.generated_image_url)
