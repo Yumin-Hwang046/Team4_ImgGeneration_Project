@@ -6,7 +6,7 @@ from typing import Dict, Optional, Any
 import requests
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 # -----------------------------
 # ENV

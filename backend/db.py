@@ -1,8 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
-from pathlib import Path
 import os
+from pathlib import Path
+
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent

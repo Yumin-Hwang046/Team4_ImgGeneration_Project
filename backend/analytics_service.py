@@ -1,12 +1,13 @@
 import json
 import os
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 SEOUL_OPEN_API_KEY = os.getenv("SEOUL_OPEN_API_KEY", "")
 SEOUL_LIVING_POP_SERVICE = os.getenv("SEOUL_LIVING_POP_SERVICE", "")
