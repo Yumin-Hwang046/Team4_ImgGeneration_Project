@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir \
     fastapi uvicorn \
-    diffusers transformers accelerate \
+    "diffusers==0.27.2" "transformers==4.40.2" accelerate \
     Pillow python-dotenv openai
 
 COPY backend/image_generator/ ./image_generator/
