@@ -43,12 +43,17 @@ def run_pipeline() -> None:
     if not args.image_path:
         raise ValueError("Case4 requires --image_path (user image).")
 
+    user_image_path = Path(args.image_path)
+    if not user_image_path.exists():
+        raise FileNotFoundError(f"User image not found: {user_image_path}")
+
     ref_path = Path(args.reference_image_path)
     if not ref_path.exists():
-        raise FileNotFoundError(f"Reference image not found: {ref_path}")
+        # 프리셋 파일이 아직 준비되지 않은 경우, 사용자 이미지를 임시 레퍼런스로 사용
+        ref_path = user_image_path
 
     result = generate_image_case4_ip_adapter(
-        user_image_path=args.image_path,
+        user_image_path=str(user_image_path),
         reference_image_path=str(ref_path),
         user_prompt=args.prompt,
         format_type=args.format_type,

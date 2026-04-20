@@ -1,17 +1,18 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import SideBar from '@/components/SideBar'
 import { api } from '@/lib/api'
-import { getStoredLocation, getStoredCategory } from '@/lib/auth'
+import { getStoredCategory, getStoredLocation, getStoredMood } from '@/lib/auth'
 
 const MOOD_OPTIONS = [
-  { id: 'sunny',  label: '맑은 날씨',    icon: 'wb_sunny',   gradient: 'from-sky-300 via-yellow-200 to-amber-100',    iconColor: 'text-yellow-500' },
-  { id: 'cloudy', label: '흐린 날씨',    icon: 'cloud',      gradient: 'from-slate-400 via-gray-300 to-slate-200',    iconColor: 'text-gray-500'   },
-  { id: 'rainy',  label: '비 오는 배경', icon: 'rainy',      gradient: 'from-slate-700 via-slate-500 to-blue-400',    iconColor: 'text-blue-200'   },
-  { id: 'warm',   label: '따뜻한 조명',  icon: 'light_mode', gradient: 'from-amber-500 via-orange-300 to-yellow-200', iconColor: 'text-amber-100'  },
+  { id: 'warm', label: 'Warm', preview: '/reference_presets/warm.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
+  { id: 'clean', label: 'Clean', preview: '/reference_presets/clean.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
+  { id: 'trendy', label: 'Trendy', preview: '/reference_presets/trendy.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
+  { id: 'premium', label: 'Premium', preview: '/reference_presets/premium.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
 ]
+const MOOD_OPTION_IDS = new Set(MOOD_OPTIONS.map((opt) => opt.id))
 
 function StepLabel({ step, label }: { step: number; label: string }) {
   return (
@@ -32,10 +33,17 @@ export default function StudioPage() {
 
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [selectedMood, setSelectedMood] = useState('sunny')
+  const [selectedMood, setSelectedMood] = useState('warm')
   const [extraPrompt, setExtraPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const storedMood = getStoredMood().toLowerCase()
+    if (MOOD_OPTION_IDS.has(storedMood)) {
+      setSelectedMood(storedMood)
+    }
+  }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -47,8 +55,8 @@ export default function StudioPage() {
   const handleGenerate = async () => {
     setError(null)
 
-    if (!imageFile && !extraPrompt.trim()) {
-      setError('이미지를 업로드하거나 문구 힌트를 입력해주세요.')
+    if (!imageFile) {
+      setError('원본 이미지를 먼저 업로드해주세요. (Case4 모델 필수)')
       return
     }
 
@@ -64,7 +72,7 @@ export default function StudioPage() {
         mood: selectedMood,
         extra_prompt: extraPrompt || undefined,
         channel: activeTab === 'story' ? 'story' : 'feed',
-        image_file: imageFile ?? undefined,
+        image_file: imageFile,
       })
       router.push(`/generating?id=${result.generation_id}`)
     } catch (err) {
@@ -116,7 +124,7 @@ export default function StudioPage() {
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-primary text-2xl mb-2">add_photo_alternate</span>
-                      <p className="text-xs text-stone-500 font-medium">이미지 업로드 (선택)</p>
+                      <p className="text-xs text-stone-500 font-medium">이미지 업로드 (필수)</p>
                     </>
                   )}
                 </div>
@@ -131,16 +139,20 @@ export default function StudioPage() {
                     <button
                       key={opt.id}
                       onClick={() => setSelectedMood(opt.id)}
-                      className={`relative aspect-[4/5] rounded-xl overflow-hidden transition-all duration-300 bg-gradient-to-b ${opt.gradient} ${
+                      className={`relative aspect-[4/5] rounded-xl overflow-hidden transition-all duration-300 ${
                         selectedMood === opt.id ? 'ring-2 ring-primary ring-offset-2 scale-[1.03]' : 'hover:scale-[1.02]'
                       }`}
                     >
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                        <span className={`material-symbols-outlined text-4xl ${opt.iconColor} drop-shadow`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                          {opt.icon}
-                        </span>
-                      </div>
-                      <div className="absolute bottom-0 inset-x-0 pb-2 flex items-end justify-center bg-gradient-to-t from-black/30 to-transparent pt-6">
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-b ${opt.gradient}`}
+                        style={{
+                          backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.2)), url(${opt.preview})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
+                      <div className="absolute bottom-0 inset-x-0 pb-2 flex items-end justify-center pt-6">
                         <span className="text-[12px] font-bold text-white drop-shadow">{opt.label}</span>
                       </div>
                       {selectedMood === opt.id && <div className="absolute inset-0 bg-primary/20" />}

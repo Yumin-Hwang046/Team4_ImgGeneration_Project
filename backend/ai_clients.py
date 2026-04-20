@@ -23,6 +23,12 @@ MODEL_VENV_PYTHON = os.getenv(
     "MODEL_VENV_PYTHON",
     str(PROJECT_ROOT / ".venv" / "bin" / "python"),
 )
+REFERENCE_PRESET_DIR = Path(
+    os.getenv(
+        "REFERENCE_PRESET_DIR",
+        str(PROJECT_ROOT / "backend" / "image_generator" / "reference_presets"),
+    )
+)
 _generated_dir_raw = Path(os.getenv("GENERATED_IMAGE_DIR", "backend/generated"))
 GENERATED_DIR = (
     _generated_dir_raw if _generated_dir_raw.is_absolute() else PROJECT_ROOT / _generated_dir_raw
@@ -112,6 +118,26 @@ def _find_output_image(output_dir: Path) -> Optional[Path]:
     return sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)[0]
 
 
+def _resolve_reference_preset_path(mood: Optional[str]) -> Path:
+    mood_key = _clean_text(mood).lower()
+    preset_map = {
+        "warm": "warm.png",
+        "clean": "clean.png",
+        "trendy": "trendy.png",
+        "premium": "premium.png",
+        "따뜻한": "warm.png",
+        "깔끔한": "clean.png",
+        "트렌디": "trendy.png",
+        "프리미엄": "premium.png",
+    }
+    filename = preset_map.get(mood_key, "default.png")
+    candidate = REFERENCE_PRESET_DIR / filename
+
+    if candidate.exists():
+        return candidate
+    return REFERENCE_PRESET_DIR / "default.png"
+
+
 def _fallback_text_result(
     purpose: str,
     business_category: str,
@@ -199,6 +225,7 @@ def call_image_generator(
             str(IMAGE_PIPELINE_SCRIPT),
             "--prompt", prompt,
             "--output_dir", str(output_dir),
+            "--reference_image_path", str(_resolve_reference_preset_path(mood)),
         ]
 
         if image_path:

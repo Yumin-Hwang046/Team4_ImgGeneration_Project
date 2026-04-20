@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { getStoredAdmCd, getStoredLocation, getStoredDongName, getStoredLat, getStoredLng, getStoredCategory } from '@/lib/auth'
+import { getStoredAdmCd, getStoredLocation, getStoredDongName, getStoredLat, getStoredLng, getStoredCategory, setStoredMood } from '@/lib/auth'
 
 const personas = [
   {
     id: 1,
     title: 'Warm',
+    moodKey: 'warm',
     desc: '부드러운 베이지 톤과 따뜻한 질감으로 고객에게 정서적 안정감과 포근한 편안함을 선사하는 페르소나입니다.',
     label: '제안 01',
     bg: 'bg-amber-100',
@@ -16,6 +17,7 @@ const personas = [
   {
     id: 2,
     title: 'Clean',
+    moodKey: 'clean',
     desc: '불필요한 요소를 덜어낸 깔끔한 미니멀리즘으로 브랜드의 본질과 순수한 가치를 전달하는 페르소나입니다.',
     label: '제안 02',
     bg: 'bg-slate-100',
@@ -24,6 +26,7 @@ const personas = [
   {
     id: 3,
     title: 'Trendy',
+    moodKey: 'trendy',
     desc: '최신 트렌드를 반영한 감각적이고 세련된 무드로 도시적인 젊은 감성을 전달하는 페르소나입니다.',
     label: '제안 03',
     bg: 'bg-rose-100',
@@ -32,6 +35,7 @@ const personas = [
   {
     id: 4,
     title: 'Premium',
+    moodKey: 'premium',
     desc: '고급스럽고 절제된 럭셔리 감성으로 브랜드의 품격과 깊은 신뢰감을 높여주는 페르소나입니다.',
     label: '제안 04',
     bg: 'bg-zinc-900',
@@ -316,6 +320,7 @@ export default function ReportPage() {
                   <p className="text-on-surface-variant text-sm leading-relaxed flex-grow">{p.desc}</p>
                   <Link
                     href="/dashboard"
+                    onClick={() => setStoredMood(p.moodKey)}
                     className={`mt-6 w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
                       isRec
                         ? 'bg-primary text-white hover:opacity-90'

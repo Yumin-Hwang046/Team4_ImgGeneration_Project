@@ -151,7 +151,10 @@ def looks_like_invalid_location(location: Optional[str]) -> bool:
 
     mood_like_values = {
         "sunny", "cloudy", "rainy", "warm",
+        "clean", "trendy", "premium",
+        "Warm", "Clean", "Trendy", "Premium",
         "맑은 날씨", "흐린 날씨", "비 오는 배경", "따뜻한 조명", "따뜻한 감성",
+        "따뜻한", "깔끔한", "트렌디", "프리미엄",
     }
     return value in mood_like_values
 

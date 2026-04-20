@@ -326,6 +326,9 @@ function EventTab({ onNewFolder }: { onNewFolder: () => void }) {
         items={[]}
         onBack={() => setSelectedFolder(null)}
         onDelete={() => {}}
+        selectMode={false}
+        selectedIds={new Set<number>()}
+        onToggleSelect={() => {}}
       />
     )
   }
@@ -452,7 +455,7 @@ export default function ArchivePage() {
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return
     if (!confirm(`선택한 ${selectedIds.size}개를 삭제하시겠습니까?`)) return
-    await Promise.all([...selectedIds].map(id => api.generations.delete(id).catch(() => {})))
+    await Promise.all(Array.from(selectedIds).map(id => api.generations.delete(id).catch(() => {})))
     setItems(prev => prev.filter(i => !selectedIds.has(i.id)))
     setSelectedIds(new Set())
     setSelectMode(false)
