@@ -26,8 +26,5 @@ Thumbs.db
 
 .omc
 .claude
+.codex
 
-# 이미지 파일 제외
-*.png
-*.jpg
-*.jpeg
