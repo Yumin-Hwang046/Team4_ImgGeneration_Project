@@ -10,44 +10,33 @@ type MoodKey = 'warm' | 'clean' | 'trendy' | 'premium'
 
 type ReferenceOption = {
   id: string
-  label: string
   filename: string
-  gradient: string
-}
-
-const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-
-const MOOD_LABELS: Record<MoodKey, string> = {
-  warm: 'Warm',
-  clean: 'Clean',
-  trendy: 'Trendy',
-  premium: 'Premium',
 }
 
 const REFERENCE_OPTIONS_BY_MOOD: Record<MoodKey, ReferenceOption[]> = {
   warm: [
-    { id: 'warm-1', label: 'Warm #1', filename: '1.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
-    { id: 'warm-2', label: 'Warm #2', filename: '2.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
-    { id: 'warm-3', label: 'Warm #3', filename: '3.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
-    { id: 'warm-4', label: 'Warm #4', filename: '4.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
+    { id: 'warm-1', filename: '1.png' },
+    { id: 'warm-2', filename: '2.png' },
+    { id: 'warm-3', filename: '3.png' },
+    { id: 'warm-4', filename: '4.png' },
   ],
   clean: [
-    { id: 'clean-1', label: 'Clean #1', filename: '1.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
-    { id: 'clean-2', label: 'Clean #2', filename: '2.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
-    { id: 'clean-3', label: 'Clean #3', filename: '3.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
-    { id: 'clean-4', label: 'Clean #4', filename: '4.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
+    { id: 'clean-1', filename: '1.png' },
+    { id: 'clean-2', filename: '2.png' },
+    { id: 'clean-3', filename: '3.png' },
+    { id: 'clean-4', filename: '4.png' },
   ],
   trendy: [
-    { id: 'trendy-1', label: 'Trendy #1', filename: '1.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
-    { id: 'trendy-2', label: 'Trendy #2', filename: '2.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
-    { id: 'trendy-3', label: 'Trendy #3', filename: '3.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
-    { id: 'trendy-4', label: 'Trendy #4', filename: '4.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
+    { id: 'trendy-1', filename: '1.png' },
+    { id: 'trendy-2', filename: '2.png' },
+    { id: 'trendy-3', filename: '3.png' },
+    { id: 'trendy-4', filename: '4.png' },
   ],
   premium: [
-    { id: 'premium-1', label: 'Premium #1', filename: '1.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
-    { id: 'premium-2', label: 'Premium #2', filename: '2.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
-    { id: 'premium-3', label: 'Premium #3', filename: '3.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
-    { id: 'premium-4', label: 'Premium #4', filename: '4.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
+    { id: 'premium-1', filename: '1.png' },
+    { id: 'premium-2', filename: '2.png' },
+    { id: 'premium-3', filename: '3.png' },
+    { id: 'premium-4', filename: '4.png' },
   ],
 }
 
@@ -182,33 +171,24 @@ export default function StudioPage() {
               {/* Step 2: Contextual Reference */}
               <section className="space-y-4">
                 <StepLabel step={2} label="Contextual Reference" />
-                <p className="text-sm text-on-surface-variant">
-                  회원가입에서 선택한 페르소나: <span className="font-bold text-on-surface">{MOOD_LABELS[selectedMood]}</span>
-                </p>
                 <div className="grid grid-cols-4 gap-3">
-                  {referenceOptions.map(opt => (
-                    <button
-                      key={opt.id}
-                      onClick={() => setSelectedReference(opt.filename)}
-                      className={`relative aspect-[4/5] rounded-xl overflow-hidden transition-all duration-300 ${
-                        selectedReference === opt.filename ? 'ring-2 ring-primary ring-offset-2 scale-[1.03]' : 'hover:scale-[1.02]'
-                      }`}
-                    >
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-b ${opt.gradient}`}
-                        style={{
-                          backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.2)), url(${BACKEND_ORIGIN}/media/reference_presets/${selectedMood}/${opt.filename})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
-                      <div className="absolute bottom-0 inset-x-0 pb-2 flex items-end justify-center pt-6">
-                        <span className="text-[12px] font-bold text-white drop-shadow">{opt.label}</span>
-                      </div>
-                      {selectedReference === opt.filename && <div className="absolute inset-0 bg-primary/20" />}
-                    </button>
-                  ))}
+                  {referenceOptions.map(opt => {
+                    const previewSrc = `/api/media/reference_presets/${selectedMood}/${opt.filename}`
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => setSelectedReference(opt.filename)}
+                        className={`relative aspect-[4/5] rounded-xl overflow-hidden transition-all duration-300 ${
+                          selectedReference === opt.filename ? 'ring-2 ring-primary ring-offset-2 scale-[1.03]' : 'hover:scale-[1.02]'
+                        }`}
+                      >
+                        <img src={previewSrc} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        {selectedReference === opt.filename && (
+                          <div className="absolute inset-0 border-2 border-primary rounded-xl pointer-events-none" />
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               </section>
 
