@@ -1,0 +1,46 @@
+'use client'
+
+import { Suspense, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { setToken } from '@/lib/auth'
+
+function InstagramSuccessContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const token = searchParams.get('token')
+    const isNew = searchParams.get('new') === 'true'
+    const linked = searchParams.get('linked') === 'true'
+
+    if (token) {
+      setToken(token)
+      if (linked) router.replace('/settings')
+      else router.replace(isNew ? '/onboarding/setup' : '/dashboard')
+    } else {
+      router.replace('/auth/login?error=auth_failed')
+    }
+  }, [searchParams, router])
+
+  return (
+    <div className="min-h-screen bg-surface flex items-center justify-center">
+      <span className="material-symbols-outlined text-primary text-4xl animate-spin">
+        progress_activity
+      </span>
+    </div>
+  )
+}
+
+export default function InstagramSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <span className="material-symbols-outlined text-primary text-4xl animate-spin">
+          progress_activity
+        </span>
+      </div>
+    }>
+      <InstagramSuccessContent />
+    </Suspense>
+  )
+}

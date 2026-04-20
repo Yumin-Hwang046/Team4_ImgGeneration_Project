@@ -56,35 +56,188 @@
 
 ## 2. ⚙️ 설치 및 실행 방법
 
-### 1) 프론트엔드 (Next.js)
+> **사전 요구사항:** Node.js 18+, Python 3.10+, MySQL 8.0+, [uv](https://github.com/astral-sh/uv) 패키지 매니저
+
+---
+
+### Step 1. 저장소 클론
+
+```bash
+git clone https://github.com/your-org/Team4_ImgGeneration_Project1.git
+cd Team4_ImgGeneration_Project1
+```
+
+---
+
+### Step 2. MySQL 데이터베이스 준비
+
+```sql
+CREATE DATABASE team4_project CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+---
+
+### Step 3. 환경 변수 설정
+
+#### 3-1. 백엔드 — `backend/.env`
+
+```env
+# ── 데이터베이스 ──────────────────────────────────────────
+DATABASE_URL=mysql+pymysql://root:1234@127.0.0.1:3306/team4_project
+
+# ── OpenAI ───────────────────────────────────────────────
+OPENAI_API_KEY=sk-...
+TEXT_MODEL_NAME=gpt-4o-mini
+
+# ── GCP 텍스트 생성 서버 (팀 내부 서버 URL) ────────────────
+TEXT_GENERATOR_URL=https://your-gcp-server/generate
+
+# ── Meta (Instagram OAuth) ───────────────────────────────
+META_APP_ID=your_meta_app_id
+META_APP_SECRET=your_meta_app_secret
+META_REDIRECT_URI=https://xxxx.ngrok-free.app/api/auth/callback/instagram
+
+```
+
+#### 3-2. 프론트엔드 — `frontend/.env.local`
+
+```env
+# ── 백엔드 API 주소 ───────────────────────────────────────
+BACKEND_URL=http://localhost:8000
+
+# ── 프론트엔드 공개 URL (OAuth 콜백용, ngrok 사용 시 교체) ─
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# ── Meta (Instagram OAuth, 백엔드와 동일 값) ─────────────
+NEXT_PUBLIC_META_APP_ID=your_meta_app_id
+NEXT_PUBLIC_META_REDIRECT_URI=https://xxxx.ngrok-free.app/api/auth/callback/instagram
+
+# ── OpenAI (AI 캘린더 팁, 상권 분석) ─────────────────────
+OPENAI_API_KEY=sk-...
+
+# ── 카카오 REST API (주소 검색) ───────────────────────────
+KAKAO_REST_API_KEY=your_kakao_rest_api_key
+
+# ── 공공데이터 (축제·행사) ────────────────────────────────
+FESTIVAL_API_KEY=your_festival_api_key
+
+# ── 상권 분석 API ─────────────────────────────────────────
+SANGKWON_API_KEY=your_sangkwon_api_key
+SEOUL_API_KEY=your_seoul_api_key
+```
+
+---
+
+### Step 4. 백엔드 실행
+
+```bash
+cd backend
+
+# 가상환경 생성 및 활성화
+uv venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+
+# 패키지 설치
+uv pip install -r requirements.txt
+
+# NVIDIA GPU 환경이라면 CUDA 버전 torch 설치 (선택)
+# uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+
+# DB 테이블 생성 (최초 1회)
+python -c "from db import Base, engine; from models import *; Base.metadata.create_all(engine)"
+
+# 서버 실행
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+백엔드가 정상 실행되면 → `http://localhost:8000/docs` 에서 Swagger UI 확인 가능
+
+---
+
+### Step 5. 프론트엔드 실행
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-### 2) 백엔드 (Python 가상환경)
+브라우저에서 → `http://localhost:3000` 접속
+
+---
+
+### Step 6. ngrok — Instagram OAuth 로컬 연동
+
+Instagram OAuth 콜백은 `https://` 주소만 허용합니다. 로컬에서 OAuth를 테스트하려면 ngrok으로 터널을 열어야 합니다.
+
+#### 6-1. ngrok 설치
+
 ```bash
-# 가상환경 생성 및 활성화
-uv venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+# macOS
+brew install ngrok
 
-# 패키지 설치
-uv pip install -r requirements.txt
+# Windows (winget)
+winget install ngrok.ngrok
+
+# 또는 https://ngrok.com/download 에서 직접 다운로드
 ```
 
-### 3) GPU 사용 시 (선택사항)
-NVIDIA GPU 환경에서 torch CUDA 버전이 필요한 경우:
+#### 6-2. 계정 인증 (최초 1회)
+
+[ngrok 대시보드](https://dashboard.ngrok.com)에서 authtoken 복사 후:
+
 ```bash
-# CUDA 12.4 예시
-uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+ngrok config add-authtoken YOUR_NGROK_AUTHTOKEN
 ```
 
-### 4) 환경 변수 (.env)
-`.env.example`을 참고해 프로젝트 루트에 `.env` 파일을 생성합니다.
+#### 6-3. 터널 실행
+
+프론트엔드(3000)만 터널을 열면 됩니다. Next.js가 `/api/[...path]`를 통해 백엔드로 내부 프록시하기 때문입니다.
+
+```bash
+# ngrok 폴더에서 실행 (또는 PATH에 등록된 경우 어디서든)
+ngrok.exe http 3000 
 ```
-OPENAI_API_KEY=YourOpenAIKey
+
+실행 후 출력되는 `Forwarding` 주소(예: `https://abcd-1234.ngrok-free.app`)를 확인합니다.
+
+#### 6-4. 환경 변수 업데이트
+
+ngrok 주소로 `.env` 파일들을 업데이트합니다.
+
+**`backend/.env`**
+```env
+META_REDIRECT_URI=https://<ngrok-주소>/api/auth/callback/instagram
 ```
+
+**`frontend/.env.local`**
+```env
+NEXT_PUBLIC_APP_URL=https://<ngrok-주소>
+NEXT_PUBLIC_META_REDIRECT_URI=https://<ngrok-주소>/api/auth/callback/instagram
+```
+
+#### 6-5. Meta 앱 설정
+
+[Meta for Developers](https://developers.facebook.com) → 앱 선택 → **Instagram Basic Display** 또는 **Instagram API** → **Valid OAuth Redirect URIs** 에 아래 주소 추가:
+
+```
+https://<ngrok-주소>/api/auth/callback/instagram
+```
+
+> ngrok 무료 플랜은 재시작할 때마다 주소가 바뀝니다. 주소가 바뀌면 `.env` 파일과 Meta 앱 설정을 함께 업데이트해야 합니다.
+
+---
+
+### 전체 실행 순서 요약
+
+| 순서 | 작업 |
+|------|------|
+| 1 | MySQL 서버 실행 후 `team4_project` DB 생성 |
+| 2 | `backend/.env` 작성 |
+| 3 | `frontend/.env.local` 작성 |
+| 4 | 백엔드 가상환경 활성화 후 `uvicorn` 실행 |
+| 5 | 프론트엔드 `npm run dev` 실행 |
+| 6 | Instagram 연동이 필요하면 ngrok 터널 2개 실행 후 주소 업데이트 |
 
 
 <br>
