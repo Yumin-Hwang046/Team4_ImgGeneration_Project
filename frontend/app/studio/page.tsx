@@ -63,6 +63,7 @@ export default function StudioPage() {
         target_date: new Date().toISOString().split('T')[0],
         mood: selectedMood,
         extra_prompt: extraPrompt || undefined,
+        channel: activeTab === 'story' ? 'story' : 'feed',
         image_file: imageFile ?? undefined,
       })
       router.push(`/generating?id=${result.generation_id}`)

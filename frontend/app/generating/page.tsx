@@ -224,11 +224,13 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
 
   const imageUrl = data.generated_image_url ?? null
 
+  const uploadChannel: Channel = data.image_mode === 'story' ? 'instagram_story' : 'instagram_feed'
+
   const handleUpload = async () => {
     setUploading(true)
     setMsg(null)
     try {
-      await api.instagram.upload(data.id, 'instagram_feed')
+      await api.instagram.upload(data.id, uploadChannel)
       setMsg({ text: '인스타그램 업로드 완료!', ok: true })
     } catch (err) {
       setMsg({ text: (err as Error).message, ok: false })
@@ -270,7 +272,7 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
         <ScheduleModal
           onClose={() => setShowScheduleModal(false)}
           onConfirm={handleSchedule}
-          defaultChannel="instagram_feed"
+          defaultChannel={uploadChannel}
         />
       )}
 
@@ -348,49 +350,74 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
           {/* Right: Instagram mockup + actions */}
           <div className="w-full lg:w-2/5 flex flex-col gap-4 h-full">
             <div className="flex-grow bg-surface-container-lowest border border-outline-variant/10 rounded-[2rem] shadow-sm flex flex-col overflow-hidden">
-              {/* Mockup header */}
-              <div className="p-5 border-b border-surface-container flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[2px]">
-                    <div className="w-full h-full rounded-full border-2 border-white bg-stone-200" />
-                  </div>
-                  <span className="text-sm font-bold text-on-surface">the_digital_curator</span>
-                </div>
-                <span className="material-symbols-outlined">more_horiz</span>
-              </div>
-
-              {/* Mockup content */}
-              <div className="overflow-y-auto p-5 flex-grow" style={{ scrollbarWidth: 'thin' }}>
-                <div className="aspect-square w-full rounded-xl overflow-hidden mb-4 bg-surface-container-low">
-                  {imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imageUrl} alt="Instagram preview" className="w-full h-full object-cover" />
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <div className="flex gap-4 text-stone-700">
-                    <span className="material-symbols-outlined">favorite</span>
-                    <span className="material-symbols-outlined">chat_bubble</span>
-                    <span className="material-symbols-outlined">send</span>
-                    <span className="material-symbols-outlined ml-auto">bookmark</span>
-                  </div>
-                  {data.generated_copy && (
-                    <p className="text-sm text-on-surface-variant leading-relaxed">{data.generated_copy}</p>
-                  )}
-                  {data.hashtags && data.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {data.hashtags.map(tag => (
-                        <span
-                          key={tag}
-                          className="px-3 py-1 bg-secondary-container text-on-secondary-container text-xs rounded-full font-medium"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
+              {data.image_mode === 'story' ? (
+                /* 스토리 목업 */
+                <div className="flex-grow flex items-center justify-center p-5">
+                  <div className="aspect-[9/16] bg-stone-900 rounded-3xl overflow-hidden shadow-2xl relative border border-white/20 w-full max-w-[220px]">
+                    {imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imageUrl} alt="Story preview" className="absolute inset-0 w-full h-full object-cover opacity-90" />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-primary-container/20" />
+                    )}
+                    <div className="absolute top-4 left-4 right-4 flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[1.5px]">
+                        <div className="w-full h-full rounded-full border border-white bg-stone-200" />
+                      </div>
+                      <span className="text-white text-[10px] font-bold drop-shadow">the_digital_curator</span>
                     </div>
-                  )}
+                    {data.generated_copy && (
+                      <div className="absolute bottom-8 left-4 right-4">
+                        <p className="text-white text-xs font-medium drop-shadow leading-relaxed line-clamp-3">{data.generated_copy}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* 피드 목업 */
+                <>
+                  <div className="p-5 border-b border-surface-container flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[2px]">
+                        <div className="w-full h-full rounded-full border-2 border-white bg-stone-200" />
+                      </div>
+                      <span className="text-sm font-bold text-on-surface">the_digital_curator</span>
+                    </div>
+                    <span className="material-symbols-outlined">more_horiz</span>
+                  </div>
+                  <div className="overflow-y-auto p-5 flex-grow" style={{ scrollbarWidth: 'thin' }}>
+                    <div className="aspect-square w-full rounded-xl overflow-hidden mb-4 bg-surface-container-low">
+                      {imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={imageUrl} alt="Instagram preview" className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex gap-4 text-stone-700">
+                        <span className="material-symbols-outlined">favorite</span>
+                        <span className="material-symbols-outlined">chat_bubble</span>
+                        <span className="material-symbols-outlined">send</span>
+                        <span className="material-symbols-outlined ml-auto">bookmark</span>
+                      </div>
+                      {data.generated_copy && (
+                        <p className="text-sm text-on-surface-variant leading-relaxed">{data.generated_copy}</p>
+                      )}
+                      {data.hashtags && data.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {data.hashtags.map(tag => (
+                            <span
+                              key={tag}
+                              className="px-3 py-1 bg-secondary-container text-on-secondary-container text-xs rounded-full font-medium"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Action buttons */}

@@ -27,6 +27,51 @@ type ModalState =
   | { mode: 'edit'; event: CalEvent }
   | null
 
+// ─── Korean Holidays ──────────────────────────────────────────────────────────
+
+type HolidayKind = 'public' | 'commemorative'
+
+interface HolidayInfo { name: string; kind: HolidayKind }
+
+// 매년 반복되는 양력 공휴일/기념일
+const SOLAR_HOLIDAYS: Record<string, HolidayInfo> = {
+  '01-01': { name: '신정',         kind: 'public' },
+  '03-01': { name: '삼일절',       kind: 'public' },
+  '05-05': { name: '어린이날',     kind: 'public' },
+  '06-06': { name: '현충일',       kind: 'public' },
+  '08-15': { name: '광복절',       kind: 'public' },
+  '10-03': { name: '개천절',       kind: 'public' },
+  '10-09': { name: '한글날',       kind: 'public' },
+  '12-25': { name: '크리스마스',   kind: 'public' },
+  '02-14': { name: '발렌타인데이', kind: 'commemorative' },
+  '03-14': { name: '화이트데이',   kind: 'commemorative' },
+  '05-08': { name: '어버이날',     kind: 'commemorative' },
+  '05-15': { name: '스승의날',     kind: 'commemorative' },
+  '10-31': { name: '할로윈',       kind: 'commemorative' },
+  '11-11': { name: '빼빼로데이',   kind: 'commemorative' },
+}
+
+function getHolidayInfo(
+  year: number,
+  month: number,
+  day: number,
+  publicHolidays: Map<string, HolidayInfo>,
+): HolidayInfo | null {
+  const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  const ymd  = `${year}-${mmdd}`
+  return publicHolidays.get(ymd) ?? SOLAR_HOLIDAYS[mmdd] ?? null
+}
+
+function getTodayHolidays(
+  year: number,
+  month: number,
+  day: number,
+  publicHolidays: Map<string, HolidayInfo>,
+): HolidayInfo[] {
+  const info = getHolidayInfo(year, month, day, publicHolidays)
+  return info ? [info] : []
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TAG_COLORS: Record<Tag, string> = {
@@ -234,8 +279,9 @@ function EventModal({ state, onClose, onSave, onDelete }: {
 
 // ─── CalendarGrid ─────────────────────────────────────────────────────────────
 
-function CalendarGrid({ year, month, events, onDayClick, onEventClick }: {
+function CalendarGrid({ year, month, events, publicHolidays, onDayClick, onEventClick }: {
   year: number; month: number; events: CalEvent[]
+  publicHolidays: Map<string, HolidayInfo>
   onDayClick: (date: number) => void
   onEventClick: (ev: CalEvent, e: React.MouseEvent) => void
 }) {
@@ -259,14 +305,21 @@ function CalendarGrid({ year, month, events, onDayClick, onEventClick }: {
       {cells.map((cell, idx) => {
         const isToday = cell.current && cell.day === today.getDate() && month === today.getMonth() && year === today.getFullYear()
         const isSunday = idx % 7 === 0
+        const holiday = cell.current ? getHolidayInfo(year, month + 1, cell.day, publicHolidays) : null
+        const isRed = (isSunday || holiday?.kind === 'public') && cell.current
         const dayEvents = cell.current ? events.filter(s => s.date === cell.day) : []
         return (
           <div key={idx} onClick={() => cell.current && onDayClick(cell.day)}
             className={`bg-surface p-2.5 min-h-[90px] cursor-pointer hover:bg-surface-container-low transition-colors ${!cell.current ? 'opacity-30 cursor-default' : ''} ${isToday ? 'ring-2 ring-primary/30 ring-inset z-10' : ''}`}>
-            <div className={`w-7 h-7 flex items-center justify-center rounded-full mb-1 text-sm font-bold ${isToday ? 'bg-primary text-white' : isSunday && cell.current ? 'text-error' : 'text-on-surface'}`}>
+            <div className={`w-7 h-7 flex items-center justify-center rounded-full mb-1 text-sm font-bold ${isToday ? 'bg-primary text-white' : isRed ? 'text-error' : 'text-on-surface'}`}>
               {cell.day}
             </div>
             <div className="space-y-0.5">
+              {holiday && (
+                <div className={`px-1.5 py-0.5 border-l-2 text-[11px] font-semibold truncate rounded-sm ${holiday.kind === 'public' ? 'bg-red-50 border-red-400 text-red-600' : 'bg-amber-50 border-amber-400 text-amber-600'}`}>
+                  {holiday.name}
+                </div>
+              )}
               {dayEvents.map((ev, i) => (
                 <div key={i} onClick={e => onEventClick(ev, e)}
                   className={`px-1.5 py-0.5 border-l-2 text-[11px] font-semibold truncate rounded-sm hover:opacity-75 transition-opacity ${effectiveColor(ev, year, month)}`}>
@@ -283,8 +336,9 @@ function CalendarGrid({ year, month, events, onDayClick, onEventClick }: {
 
 // ─── WeekView ─────────────────────────────────────────────────────────────────
 
-function WeekView({ year, month, baseDay, events, onDayClick, onEventClick }: {
+function WeekView({ year, month, baseDay, events, publicHolidays, onDayClick, onEventClick }: {
   year: number; month: number; baseDay: number; events: CalEvent[]
+  publicHolidays: Map<string, HolidayInfo>
   onDayClick: (date: number) => void
   onEventClick: (ev: CalEvent, e: React.MouseEvent) => void
 }) {
@@ -295,10 +349,13 @@ function WeekView({ year, month, baseDay, events, onDayClick, onEventClick }: {
       <div className="grid grid-cols-7 gap-px bg-stone-100 rounded-t-xl border border-stone-100 border-b-0 shrink-0">
         {weekDates.map((date, i) => {
           const isToday = date.toDateString() === today.toDateString()
+          const holiday = getHolidayInfo(date.getFullYear(), date.getMonth() + 1, date.getDate(), publicHolidays)
+          const isRed = i === 0 || holiday?.kind === 'public'
           return (
             <div key={i} className="bg-surface py-3 flex flex-col items-center gap-1">
               <span className={`text-xs font-bold tracking-widest uppercase ${i === 0 ? 'text-error' : 'text-stone-400'}`}>{DAYS_KO[i]}</span>
-              <span className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold transition-colors ${isToday ? 'bg-primary text-white' : 'text-on-surface hover:bg-surface-container-low'}`}>{date.getDate()}</span>
+              <span className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold transition-colors ${isToday ? 'bg-primary text-white' : isRed ? 'text-error' : 'text-on-surface hover:bg-surface-container-low'}`}>{date.getDate()}</span>
+              {holiday && <span className="text-[9px] text-center leading-tight px-1 text-amber-600 font-semibold truncate w-full text-center">{holiday.name}</span>}
             </div>
           )
         })}
@@ -382,8 +439,6 @@ function ListView({ year, month, events, onEventClick, onAddNew }: {
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 // ─── Cache helpers ────────────────────────────────────────────────────────────
 
 function getCache<T>(key: string, ttlMs: number): T | null {
@@ -452,6 +507,7 @@ export default function CalendarPage() {
   const [view, setView]   = useState<ViewMode>('월간')
   const [events, setEvents]               = useState<CalEvent[]>([])
   const [festivalEvents, setFestivalEvents] = useState<CalEvent[]>([])
+  const [publicHolidays, setPublicHolidays] = useState<Map<string, HolidayInfo>>(new Map())
   const [modal, setModal]   = useState<ModalState>(null)
   const [location, setLocation] = useState(getStoredLocation)
   const [locationInput, setLocationInput] = useState(getStoredLocation)
@@ -466,26 +522,59 @@ export default function CalendarPage() {
 
   useEffect(() => { setHasMounted(true) }, [])
 
+  // 공휴일 API (Nager.Date) – 연도 변경 시 갱신, localStorage 7일 캐시
+  useEffect(() => {
+    const cacheKey = `cache_holidays_${year}`
+    const cached = getCache<Array<[string, HolidayInfo]>>(cacheKey, 7 * 24 * 60 * 60 * 1000)
+    if (cached) {
+      setPublicHolidays(new Map(cached))
+      return
+    }
+    fetch(`/api/holidays?year=${year}`)
+      .then(r => r.json())
+      .then((data: Array<{ date: string; localName: string; types: string[] }>) => {
+        if (!Array.isArray(data)) return
+        const map = new Map<string, HolidayInfo>()
+        data.forEach(h => {
+          map.set(h.date, {
+            name: h.localName,
+            kind: h.types.includes('Public') ? 'public' : 'commemorative',
+          })
+        })
+        setPublicHolidays(map)
+        setCache(cacheKey, Array.from(map.entries()))
+      })
+      .catch(() => {})
+  }, [year])
+
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1) }
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1) }
 
-  // 유저 일정만 별도 관리 (축제와 분리)
+  // 유저 일정만 별도 관리 (축제와 분리) - 선언을 위로 끌어올림!
   const loadEvents = useCallback(() => {
     setLoading(true)
-    Promise.all([
+    Promise.allSettled([
       api.calendar.getEvents(year, month + 1, location || undefined),
       api.calendar.getSchedules(),
     ])
-      .then(([evts, scheds]) => {
+      .then(([evtsResult, schedsResult]) => {
+        const evts = evtsResult.status === 'fulfilled' ? evtsResult.value : []
+        const scheds = schedsResult.status === 'fulfilled' ? schedsResult.value : []
         const calEvents = evts.map(toCalEventFromBackend)
         const calSchedules = scheds
           .map(s => toCalEventFromSchedule(s, year, month + 1))
           .filter((e): e is CalEvent => e !== null)
         setEvents([...calEvents, ...calSchedules])
       })
-      .catch(() => setEvents([]))
       .finally(() => setLoading(false))
   }, [year, month, location])
+
+  // 페이지가 다시 보일 때 스케줄/이벤트 자동 갱신 (loadEvents 아래로 이동)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') loadEvents() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [loadEvents])
 
   useEffect(() => { loadEvents() }, [loadEvents])
 
@@ -549,6 +638,14 @@ export default function CalendarPage() {
         f.isNearby && f.startDate <= todayStr && f.endDate >= todayStr
       )
 
+      const todayDate = new Date()
+      const todayHolidays = getTodayHolidays(
+        todayDate.getFullYear(),
+        todayDate.getMonth() + 1,
+        todayDate.getDate(),
+        publicHolidays,
+      )
+
       fetch('/api/calendar-tip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -557,6 +654,7 @@ export default function CalendarPage() {
           festivals: nearbyOngoing,
           category,
           currentHour,
+          holidays: todayHolidays,
         }),
       })
         .then(r => r.json())
@@ -569,7 +667,7 @@ export default function CalendarPage() {
         .catch(() => {})
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month])
+  }, [year, month, publicHolidays])
 
   // 모든 달력 표시 이벤트 = 유저 일정 + 축제 이벤트
   const allEvents = [...events, ...festivalEvents]
@@ -738,8 +836,8 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            {view === '월간' && <CalendarGrid year={year} month={month} events={allEvents} onDayClick={openAdd} onEventClick={openEdit} />}
-            {view === '주간' && <WeekView year={year} month={month} baseDay={today.getDate()} events={allEvents} onDayClick={openAdd} onEventClick={openEdit} />}
+            {view === '월간' && <CalendarGrid year={year} month={month} events={allEvents} publicHolidays={publicHolidays} onDayClick={openAdd} onEventClick={openEdit} />}
+            {view === '주간' && <WeekView year={year} month={month} baseDay={today.getDate()} events={allEvents} publicHolidays={publicHolidays} onDayClick={openAdd} onEventClick={openEdit} />}
             {view === '리스트' && <ListView year={year} month={month} events={allEvents} onEventClick={openEdit} onAddNew={() => openAdd(today.getDate())} />}
           </div>
         </div>
