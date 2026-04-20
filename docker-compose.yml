@@ -1,4 +1,13 @@
 services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: "1234"
+      MYSQL_DATABASE: team4_project
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -10,7 +19,9 @@ services:
     environment:
       - IMAGE_GENERATOR_URL=http://model:8001/generate-image
       - TEXT_GENERATOR_URL=http://model:8001/generate-text
+      - DATABASE_URL=mysql+pymysql://root:1234@db:3306/team4_project
     depends_on:
+      - db
       - model
     restart: unless-stopped
 
@@ -32,3 +43,6 @@ services:
               count: 1
               capabilities: [gpu]
     restart: unless-stopped
+
+volumes:
+  db_data:
