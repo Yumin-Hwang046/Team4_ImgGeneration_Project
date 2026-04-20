@@ -327,11 +327,10 @@ def get_calendar_day(
 def list_calendar_events(
     year: int = Query(..., ge=2000, le=2100),
     month: int = Query(..., ge=1, le=12),
+    location: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    profile = get_profile_or_404(db, current_user)
-
     start_date = date(year, month, 1)
     _, last_day = monthrange(year, month)
     end_date = date(year, month, last_day)
@@ -340,7 +339,10 @@ def list_calendar_events(
         CalendarEvent.event_date >= start_date,
         CalendarEvent.event_date <= end_date,
     )
-    query = build_event_region_query(query, profile)
+
+    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if profile:
+        query = build_event_region_query(query, profile)
 
     rows = query.order_by(CalendarEvent.event_date.asc(), CalendarEvent.id.asc()).all()
     return rows

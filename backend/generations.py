@@ -369,10 +369,8 @@ def process_generation_task(
         if uploaded_filename:
             original_image_url = to_public_media_url(uploaded_filename)
             source_image_path = uploaded_filename
-            image_mode = "uploaded_and_analyzed"
             extra_info = f"[IMAGE_ANALYSIS] 업로드 이미지 분석 완료: {uploaded_filename}\n[USER_PROMPT] {extra_prompt or ''}"
         else:
-            image_mode = "generated"
             extra_info = f"[NO_UPLOAD_IMAGE]\n[USER_PROMPT] {extra_prompt or ''}"
 
         raw_image_result = call_image_generator(
@@ -441,7 +439,6 @@ def process_generation_task(
         generation.recommended_concept = recommended_concept
         generation.original_image_url = original_image_url
         generation.generated_image_url = generated_image_url
-        generation.image_mode = image_mode
         generation.generation_status = "SUCCESS"
 
         version_no = get_next_version_no(db, generation.id)
@@ -686,6 +683,7 @@ async def run_generation(
     target_time: Optional[str] = Form(None),
     mood: Optional[str] = Form(None),
     extra_prompt: Optional[str] = Form(None),
+    channel: Optional[str] = Form(None),
     image_file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -709,6 +707,8 @@ async def run_generation(
         shutil.copyfileobj(image_file.file, buffer)
     uploaded_filename = str(saved_path)
 
+    post_channel = channel if channel in ("feed", "story") else "feed"
+
     generation = Generation(
         user_id=current_user.id,
         purpose=purpose,
@@ -718,6 +718,7 @@ async def run_generation(
         location=location,
         extra_info="[PENDING] 생성 작업 대기 중",
         generation_status="PENDING",
+        image_mode=post_channel,
     )
 
     db.add(generation)

@@ -55,19 +55,27 @@ def _create_media_container(
     channel: str,
 ) -> str:
     """미디어 컨테이너 생성 후 creation_id 반환"""
-    params: dict = {
+    is_story = channel == "instagram_story"
+
+    # POST 요청이므로 params가 아닌 'data'로 보낼 payload 구성
+    payload: dict = {
         "image_url": image_url,
         "access_token": access_token,
     }
 
-    # 스토리/피드 모두 IMAGE 타입으로 발행 (caption 포함)
-    # media_type=STORIES 는 앱 심사 통과 후 Meta에서 별도 활성화 필요
-    if caption:
-        params["caption"] = caption
+    if is_story:
+        # 1. 스토리로 올리려면 이 옵션이 필수입니다.
+        payload["media_type"] = "STORIES"
+        # 2. 스토리는 API 상 본문(caption)을 지원하지 않으므로 캡션은 무시합니다.
+    else:
+        # 3. 피드(Feed)일 경우에만 본문을 추가합니다.
+        if caption:
+            payload["caption"] = caption
 
+    # 핵심: params=params 가 아니라 data=payload 로 보내야 긴 글 에러가 안 납니다.
     res = http_requests.post(
         f"{GRAPH_API}/{ig_account_id}/media",
-        params=params,
+        data=payload,
         timeout=30,
     )
 
@@ -107,9 +115,10 @@ def _publish_media(ig_account_id: str, access_token: str, image_url: str, captio
     creation_id = _create_media_container(ig_account_id, access_token, image_url, caption, channel)
     _wait_for_container(creation_id, access_token)
 
+    # 여기도 params= 가 아니라 data= 로 수정해야 합니다.
     publish_res = http_requests.post(
         f"{GRAPH_API}/{ig_account_id}/media_publish",
-        params={"creation_id": creation_id, "access_token": access_token},
+        data={"creation_id": creation_id, "access_token": access_token},
         timeout=30,
     )
     if not publish_res.ok:

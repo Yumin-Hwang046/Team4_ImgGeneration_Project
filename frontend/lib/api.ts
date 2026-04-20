@@ -83,6 +83,7 @@ export interface RunGenerationRequest {
   target_time?: string
   mood?: string
   extra_prompt?: string
+  channel?: string
   image_file?: File
 }
 
@@ -286,6 +287,7 @@ export const api = {
       if (params.target_time) fd.append('target_time', params.target_time)
       if (params.mood) fd.append('mood', params.mood)
       if (params.extra_prompt) fd.append('extra_prompt', params.extra_prompt)
+      if (params.channel) fd.append('channel', params.channel)
       if (params.image_file) fd.append('image_file', params.image_file)
       return requestMultipart<RunGenerationResponse>('/generations/run', fd)
     },
