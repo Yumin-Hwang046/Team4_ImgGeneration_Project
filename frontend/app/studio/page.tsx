@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import SideBar from '@/components/SideBar'
 import { api } from '@/lib/api'
-import { getStoredCategory, getStoredLocation, getStoredMood } from '@/lib/auth'
+import { getStoredCategory, getStoredLocation } from '@/lib/auth'
 
 const MOOD_OPTIONS = [
   { id: 'warm', label: 'Warm', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
@@ -39,11 +39,15 @@ export default function StudioPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const storedMood = getStoredMood().toLowerCase()
+    const storedMood =
+      (typeof window !== 'undefined' ? localStorage.getItem('user_mood') : '')?.toLowerCase() ?? ''
+
     if (MOOD_OPTION_IDS.has(storedMood)) {
       setSelectedMood(storedMood)
     }
   }, [])
+
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

@@ -2,7 +2,6 @@ export const TOKEN_KEY = 'auth_token'
 export const LOCATION_KEY = 'user_location'
 export const CATEGORY_KEY = 'user_category'
 export const STORE_NAME_KEY = 'user_store_name'
-export const MOOD_KEY = 'user_mood'
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -42,15 +41,6 @@ export function getStoredStoreName(): string {
 
 export function setStoredStoreName(name: string): void {
   localStorage.setItem(STORE_NAME_KEY, name)
-}
-
-export function getStoredMood(): string {
-  if (typeof window === 'undefined') return ''
-  return localStorage.getItem(MOOD_KEY) ?? ''
-}
-
-export function setStoredMood(mood: string): void {
-  localStorage.setItem(MOOD_KEY, mood)
 }
 
 export const ADM_CD_KEY = 'user_adm_cd'
