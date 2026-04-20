@@ -4,15 +4,61 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import SideBar from '@/components/SideBar'
 import { api } from '@/lib/api'
-import { getStoredCategory, getStoredLocation } from '@/lib/auth'
+import { getStoredCategory, getStoredLocation, getStoredMood } from '@/lib/auth'
 
-const MOOD_OPTIONS = [
-  { id: 'warm', label: 'Warm', preview: '/reference_presets/warm.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
-  { id: 'clean', label: 'Clean', preview: '/reference_presets/clean.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
-  { id: 'trendy', label: 'Trendy', preview: '/reference_presets/trendy.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
-  { id: 'premium', label: 'Premium', preview: '/reference_presets/premium.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
-]
-const MOOD_OPTION_IDS = new Set(MOOD_OPTIONS.map((opt) => opt.id))
+type MoodKey = 'warm' | 'clean' | 'trendy' | 'premium'
+
+type ReferenceOption = {
+  id: string
+  label: string
+  filename: string
+  gradient: string
+}
+
+const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+
+const MOOD_LABELS: Record<MoodKey, string> = {
+  warm: 'Warm',
+  clean: 'Clean',
+  trendy: 'Trendy',
+  premium: 'Premium',
+}
+
+const REFERENCE_OPTIONS_BY_MOOD: Record<MoodKey, ReferenceOption[]> = {
+  warm: [
+    { id: 'warm-1', label: 'Warm #1', filename: '1.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
+    { id: 'warm-2', label: 'Warm #2', filename: '2.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
+    { id: 'warm-3', label: 'Warm #3', filename: '3.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
+    { id: 'warm-4', label: 'Warm #4', filename: '4.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
+  ],
+  clean: [
+    { id: 'clean-1', label: 'Clean #1', filename: '1.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
+    { id: 'clean-2', label: 'Clean #2', filename: '2.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
+    { id: 'clean-3', label: 'Clean #3', filename: '3.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
+    { id: 'clean-4', label: 'Clean #4', filename: '4.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
+  ],
+  trendy: [
+    { id: 'trendy-1', label: 'Trendy #1', filename: '1.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
+    { id: 'trendy-2', label: 'Trendy #2', filename: '2.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
+    { id: 'trendy-3', label: 'Trendy #3', filename: '3.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
+    { id: 'trendy-4', label: 'Trendy #4', filename: '4.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
+  ],
+  premium: [
+    { id: 'premium-1', label: 'Premium #1', filename: '1.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
+    { id: 'premium-2', label: 'Premium #2', filename: '2.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
+    { id: 'premium-3', label: 'Premium #3', filename: '3.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
+    { id: 'premium-4', label: 'Premium #4', filename: '4.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
+  ],
+}
+
+function normalizeMood(value: string): MoodKey {
+  const raw = value.trim().toLowerCase()
+  if (raw === 'warm' || raw === '따뜻한') return 'warm'
+  if (raw === 'clean' || raw === '깔끔한') return 'clean'
+  if (raw === 'trendy' || raw === '트렌디') return 'trendy'
+  if (raw === 'premium' || raw === '프리미엄') return 'premium'
+  return 'warm'
+}
 
 function StepLabel({ step, label }: { step: number; label: string }) {
   return (
@@ -33,21 +79,18 @@ export default function StudioPage() {
 
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [selectedMood, setSelectedMood] = useState('warm')
+  const [selectedMood, setSelectedMood] = useState<MoodKey>('warm')
+  const [selectedReference, setSelectedReference] = useState('1.png')
   const [extraPrompt, setExtraPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const storedMood =
-      (typeof window !== 'undefined' ? localStorage.getItem('user_mood') : '')?.toLowerCase() ?? ''
-
-    if (MOOD_OPTION_IDS.has(storedMood)) {
-      setSelectedMood(storedMood)
-    }
+    const moodFromSignup = normalizeMood(getStoredMood())
+    setSelectedMood(moodFromSignup)
+    setSelectedReference('1.png')
   }, [])
-
-
+  const referenceOptions = REFERENCE_OPTIONS_BY_MOOD[selectedMood]
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -74,6 +117,7 @@ export default function StudioPage() {
         location: getStoredLocation() || '서울',
         target_date: new Date().toISOString().split('T')[0],
         mood: selectedMood,
+        reference_preset: selectedReference,
         extra_prompt: extraPrompt || undefined,
         channel: activeTab === 'story' ? 'story' : 'feed',
         image_file: imageFile,
@@ -135,22 +179,25 @@ export default function StudioPage() {
                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               </section>
 
-              {/* Step 3: Mood */}
+              {/* Step 2: Contextual Reference */}
               <section className="space-y-4">
                 <StepLabel step={2} label="Contextual Reference" />
+                <p className="text-sm text-on-surface-variant">
+                  회원가입에서 선택한 페르소나: <span className="font-bold text-on-surface">{MOOD_LABELS[selectedMood]}</span>
+                </p>
                 <div className="grid grid-cols-4 gap-3">
-                  {MOOD_OPTIONS.map(opt => (
+                  {referenceOptions.map(opt => (
                     <button
                       key={opt.id}
-                      onClick={() => setSelectedMood(opt.id)}
+                      onClick={() => setSelectedReference(opt.filename)}
                       className={`relative aspect-[4/5] rounded-xl overflow-hidden transition-all duration-300 ${
-                        selectedMood === opt.id ? 'ring-2 ring-primary ring-offset-2 scale-[1.03]' : 'hover:scale-[1.02]'
+                        selectedReference === opt.filename ? 'ring-2 ring-primary ring-offset-2 scale-[1.03]' : 'hover:scale-[1.02]'
                       }`}
                     >
                       <div
                         className={`absolute inset-0 bg-gradient-to-b ${opt.gradient}`}
                         style={{
-                          backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.2)), url(${opt.preview})`,
+                          backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.2)), url(${BACKEND_ORIGIN}/media/reference_presets/${selectedMood}/${opt.filename})`,
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
                         }}
@@ -159,7 +206,7 @@ export default function StudioPage() {
                       <div className="absolute bottom-0 inset-x-0 pb-2 flex items-end justify-center pt-6">
                         <span className="text-[12px] font-bold text-white drop-shadow">{opt.label}</span>
                       </div>
-                      {selectedMood === opt.id && <div className="absolute inset-0 bg-primary/20" />}
+                      {selectedReference === opt.filename && <div className="absolute inset-0 bg-primary/20" />}
                     </button>
                   ))}
                 </div>
