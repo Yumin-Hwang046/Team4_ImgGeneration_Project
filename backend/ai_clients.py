@@ -118,23 +118,41 @@ def _find_output_image(output_dir: Path) -> Optional[Path]:
     return sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)[0]
 
 
-def _resolve_reference_preset_path(mood: Optional[str]) -> Path:
+def _normalize_mood_key(mood: Optional[str]) -> str:
     mood_key = _clean_text(mood).lower()
-    preset_map = {
-        "warm": "warm.png",
-        "clean": "clean.png",
-        "trendy": "trendy.png",
-        "premium": "premium.png",
-        "따뜻한": "warm.png",
-        "깔끔한": "clean.png",
-        "트렌디": "trendy.png",
-        "프리미엄": "premium.png",
+    mood_map = {
+        "warm": "warm",
+        "clean": "clean",
+        "trendy": "trendy",
+        "premium": "premium",
+        "따뜻한": "warm",
+        "깔끔한": "clean",
+        "트렌디": "trendy",
+        "프리미엄": "premium",
     }
-    filename = preset_map.get(mood_key, "default.png")
-    candidate = REFERENCE_PRESET_DIR / filename
+    return mood_map.get(mood_key, "warm")
 
-    if candidate.exists():
-        return candidate
+
+def _resolve_reference_preset_path(mood: Optional[str], reference_preset: Optional[str]) -> Path:
+    mood_key = _normalize_mood_key(mood)
+    mood_dir = REFERENCE_PRESET_DIR / mood_key
+
+    # 경로 탈출 방지: 파일명만 사용
+    safe_filename = Path(reference_preset).name if reference_preset else "1.png"
+    requested = mood_dir / safe_filename
+    if requested.exists():
+        return requested
+
+    for fallback_name in ("1.png", "2.png", "3.png", "4.png"):
+        fallback = mood_dir / fallback_name
+        if fallback.exists():
+            return fallback
+
+    # 기존 단일 파일 구조와의 호환
+    legacy = REFERENCE_PRESET_DIR / f"{mood_key}.png"
+    if legacy.exists():
+        return legacy
+
     return REFERENCE_PRESET_DIR / "default.png"
 
 
@@ -198,6 +216,7 @@ def call_image_generator(
     menu_name: str,
     location: str,
     mood: Optional[str],
+    reference_preset: Optional[str],
     recommended_concept: str,
     extra_prompt: Optional[str] = None,
     image_path: Optional[str] = None,
@@ -225,7 +244,7 @@ def call_image_generator(
             str(IMAGE_PIPELINE_SCRIPT),
             "--prompt", prompt,
             "--output_dir", str(output_dir),
-            "--reference_image_path", str(_resolve_reference_preset_path(mood)),
+            "--reference_image_path", str(_resolve_reference_preset_path(mood, reference_preset)),
         ]
 
         if image_path:
