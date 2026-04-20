@@ -228,8 +228,9 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
   const [scheduling, setScheduling] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
+  const [permalink, setPermalink] = useState<string | null>(null)
 
-  const imageUrl = data.generated_image_url ?? null
+  const imageUrl = resolveImageUrl(data.generated_image_url)
 
   const uploadChannel: Channel = data.image_mode === 'story' ? 'instagram_story' : 'instagram_feed'
 
@@ -237,8 +238,9 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
     setUploading(true)
     setMsg(null)
     try {
-      await api.instagram.upload(data.id, uploadChannel)
+      const res = await api.instagram.upload(data.id, uploadChannel)
       setMsg({ text: '인스타그램 업로드 완료!', ok: true })
+      if (res.permalink) setPermalink(res.permalink)
     } catch (err) {
       setMsg({ text: (err as Error).message, ok: false })
     } finally {
@@ -294,12 +296,23 @@ function ResultPage({ data }: { data: GenerationDetailResponse }) {
         </div>
 
         {msg && (
-          <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium border ${
+          <div className={`mb-6 px-4 py-3 rounded-xl text-sm font-medium border flex items-center justify-between gap-4 ${
             msg.ok
               ? 'bg-primary/10 border-primary/20 text-primary'
               : 'bg-error/10 border-error/20 text-error'
           }`}>
-            {msg.text}
+            <span>{msg.text}</span>
+            {permalink && (
+              <a
+                href={permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-bold hover:opacity-90 transition-opacity"
+              >
+                게시물 보기
+                <span className="material-symbols-outlined text-base">open_in_new</span>
+              </a>
+            )}
           </div>
         )}
 

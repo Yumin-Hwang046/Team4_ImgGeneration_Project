@@ -12,7 +12,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,7 +27,7 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      await api.auth.signup(email, password, name)
+      await api.auth.signup(email, password, '')
       const { access_token } = await api.auth.login(email, password)
       setToken(access_token)
       router.push('/onboarding/setup')
@@ -101,20 +100,6 @@ export default function SignupPage() {
                     className="w-full px-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary-container text-sm text-on-surface placeholder:text-outline/40 transition-all duration-200 outline-none"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider px-1">
-                  매장 이름
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="운영하시는 매장명을 입력하세요"
-                  required
-                  className="w-full px-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary-container text-sm text-on-surface placeholder:text-outline/40 transition-all duration-200 outline-none"
-                />
               </div>
 
               <div className="pt-2">

@@ -5,8 +5,12 @@ import Link from 'next/link'
 import SideBar from '@/components/SideBar'
 import { api, GenerationListItem } from '@/lib/api'
 
+const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+
 function validImgSrc(url: string | null): string | null {
-  if (url && (url.startsWith('http://') || url.startsWith('https://'))) return url
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  if (url.startsWith('/media/')) return `${BACKEND_ORIGIN}${url}`
   return null
 }
 

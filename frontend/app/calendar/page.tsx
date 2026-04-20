@@ -279,9 +279,10 @@ function EventModal({ state, onClose, onSave, onDelete }: {
 
 // ─── CalendarGrid ─────────────────────────────────────────────────────────────
 
-function CalendarGrid({ year, month, events, publicHolidays, onDayClick, onEventClick }: {
+function CalendarGrid({ year, month, events, publicHolidays, dailyForecast, onDayClick, onEventClick }: {
   year: number; month: number; events: CalEvent[]
   publicHolidays: Map<string, HolidayInfo>
+  dailyForecast?: { date: string; icon: string }[]
   onDayClick: (date: number) => void
   onEventClick: (ev: CalEvent, e: React.MouseEvent) => void
 }) {
@@ -290,6 +291,10 @@ function CalendarGrid({ year, month, events, publicHolidays, onDayClick, onEvent
   const firstDay = getFirstDayOfMonth(year, month)
   const prevMonthDays = getDaysInPrevMonth(year, month)
   const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7
+  const forecastMap = new Map((dailyForecast ?? []).map(f => [f.date, f.icon]))
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const twoWeeksLater = new Date(todayMidnight)
+  twoWeeksLater.setDate(twoWeeksLater.getDate() + 13)
 
   const cells = Array.from({ length: totalCells }, (_, i) => {
     if (i < firstDay) return { day: prevMonthDays - firstDay + i + 1, current: false }
@@ -311,8 +316,17 @@ function CalendarGrid({ year, month, events, publicHolidays, onDayClick, onEvent
         return (
           <div key={idx} onClick={() => cell.current && onDayClick(cell.day)}
             className={`bg-surface p-2.5 min-h-[90px] cursor-pointer hover:bg-surface-container-low transition-colors ${!cell.current ? 'opacity-30 cursor-default' : ''} ${isToday ? 'ring-2 ring-primary/30 ring-inset z-10' : ''}`}>
-            <div className={`w-7 h-7 flex items-center justify-center rounded-full mb-1 text-sm font-bold ${isToday ? 'bg-primary text-white' : isRed ? 'text-error' : 'text-on-surface'}`}>
-              {cell.day}
+            <div className="flex items-center gap-0.5 mb-1">
+              <div className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold ${isToday ? 'bg-primary text-white' : isRed ? 'text-error' : 'text-on-surface'}`}>
+                {cell.day}
+              </div>
+              {cell.current && (() => {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`
+                const cellDate = new Date(year, month, cell.day)
+                const icon = forecastMap.get(dateStr)
+                if (!icon || cellDate < todayMidnight || cellDate > twoWeeksLater) return null
+                return <span className="material-symbols-outlined text-[13px] text-stone-400" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+              })()}
             </div>
             <div className="space-y-0.5">
               {holiday && (
@@ -514,6 +528,7 @@ export default function CalendarPage() {
   const [weather, setWeather] = useState<{
     summary: string; condition: string; icon: string
     temp: number; hasRain: boolean; hasSnow: boolean; rainSummary: string | null
+    dailyForecast?: { date: string; icon: string }[]
   } | null>(null)
   const [festivals, setFestivals] = useState<FestivalItem[]>([])
   const [aiTip, setAiTip] = useState<string | null>(null)
@@ -730,8 +745,8 @@ export default function CalendarPage() {
   return (
     <div className="flex min-h-screen bg-surface text-on-surface">
       <SideBar />
-      <main className="ml-64 flex-1 flex flex-col h-screen overflow-hidden bg-surface">
-        <div className="flex flex-col flex-1 px-10 pb-6 pt-8 gap-6 overflow-hidden">
+      <main className="ml-64 flex-1 flex flex-col h-screen bg-surface">
+        <div className="flex flex-col flex-1 px-10 pb-6 pt-8 gap-6 overflow-y-auto min-h-0">
           <div className="flex flex-col gap-1 shrink-0">
             <span className="text-[0.65rem] font-medium tracking-[0.2em] text-primary uppercase">Editorial Overview</span>
             <h3 className="text-3xl font-bold font-headline text-on-surface">캘린더</h3>
@@ -812,7 +827,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Calendar Card */}
-          <div className="flex-1 flex flex-col bg-white rounded-2xl shadow-sm p-6 overflow-hidden border border-stone-100">
+          <div className="flex-1 flex flex-col bg-white rounded-2xl shadow-sm p-6 overflow-hidden border border-stone-100 min-h-[500px]">
             <div className="flex justify-between items-center mb-5 shrink-0">
               <div className="flex items-center gap-6">
                 <h4 className="text-xl font-bold font-headline">{year}년 {month + 1}월</h4>
@@ -836,7 +851,7 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            {view === '월간' && <CalendarGrid year={year} month={month} events={allEvents} publicHolidays={publicHolidays} onDayClick={openAdd} onEventClick={openEdit} />}
+            {view === '월간' && <CalendarGrid year={year} month={month} events={allEvents} publicHolidays={publicHolidays} dailyForecast={weather?.dailyForecast} onDayClick={openAdd} onEventClick={openEdit} />}
             {view === '주간' && <WeekView year={year} month={month} baseDay={today.getDate()} events={allEvents} publicHolidays={publicHolidays} onDayClick={openAdd} onEventClick={openEdit} />}
             {view === '리스트' && <ListView year={year} month={month} events={allEvents} onEventClick={openEdit} onAddNew={() => openAdd(today.getDate())} />}
           </div>

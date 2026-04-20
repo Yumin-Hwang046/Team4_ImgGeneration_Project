@@ -7,10 +7,10 @@ import { api } from '@/lib/api'
 import { getStoredCategory, getStoredLocation, getStoredMood } from '@/lib/auth'
 
 const MOOD_OPTIONS = [
-  { id: 'warm', label: 'Warm', preview: '/reference_presets/warm.png', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
-  { id: 'clean', label: 'Clean', preview: '/reference_presets/clean.png', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
-  { id: 'trendy', label: 'Trendy', preview: '/reference_presets/trendy.png', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
-  { id: 'premium', label: 'Premium', preview: '/reference_presets/premium.png', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
+  { id: 'warm', label: 'Warm', gradient: 'from-amber-500 via-orange-300 to-yellow-200' },
+  { id: 'clean', label: 'Clean', gradient: 'from-slate-300 via-gray-200 to-zinc-100' },
+  { id: 'trendy', label: 'Trendy', gradient: 'from-rose-500 via-fuchsia-300 to-orange-200' },
+  { id: 'premium', label: 'Premium', gradient: 'from-zinc-800 via-stone-600 to-amber-400' },
 ]
 const MOOD_OPTION_IDS = new Set(MOOD_OPTIONS.map((opt) => opt.id))
 
@@ -145,11 +145,6 @@ export default function StudioPage() {
                     >
                       <div
                         className={`absolute inset-0 bg-gradient-to-b ${opt.gradient}`}
-                        style={{
-                          backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.2)), url(${opt.preview})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
                       <div className="absolute bottom-0 inset-x-0 pb-2 flex items-end justify-center pt-6">
