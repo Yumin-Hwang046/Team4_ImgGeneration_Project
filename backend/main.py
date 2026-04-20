@@ -57,6 +57,8 @@ app.add_middleware(
 # media static serving
 (BACKEND_DIR / "generated").mkdir(parents=True, exist_ok=True)
 (BACKEND_DIR / "uploads").mkdir(parents=True, exist_ok=True)
+REFERENCE_PRESETS_DIR = BACKEND_DIR / "image_generator" / "reference_presets"
+REFERENCE_PRESETS_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount(
     "/media/generated",
@@ -67,6 +69,11 @@ app.mount(
     "/media/uploads",
     StaticFiles(directory=str(BACKEND_DIR / "uploads")),
     name="media-uploads",
+)
+app.mount(
+    "/media/reference_presets",
+    StaticFiles(directory=str(REFERENCE_PRESETS_DIR)),
+    name="media-reference-presets",
 )
 
 app.include_router(auth_router)
@@ -109,4 +116,3 @@ except ImportError as e:
 @app.get("/")
 def root():
     return {"message": "Backend is running"}
-
