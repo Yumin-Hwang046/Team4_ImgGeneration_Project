@@ -26,8 +26,12 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
+const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+
 function validImgSrc(url: string | null): string | null {
-  if (url && (url.startsWith('http://') || url.startsWith('https://'))) return url
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  if (url.startsWith('/media/')) return `${BACKEND_ORIGIN}${url}`
   return null
 }
 
@@ -322,6 +326,9 @@ function EventTab({ onNewFolder }: { onNewFolder: () => void }) {
         items={[]}
         onBack={() => setSelectedFolder(null)}
         onDelete={() => {}}
+        selectMode={false}
+        selectedIds={new Set<number>()}
+        onToggleSelect={() => {}}
       />
     )
   }
@@ -448,7 +455,7 @@ export default function ArchivePage() {
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return
     if (!confirm(`선택한 ${selectedIds.size}개를 삭제하시겠습니까?`)) return
-    await Promise.all([...selectedIds].map(id => api.generations.delete(id).catch(() => {})))
+    await Promise.all(Array.from(selectedIds).map(id => api.generations.delete(id).catch(() => {})))
     setItems(prev => prev.filter(i => !selectedIds.has(i.id)))
     setSelectedIds(new Set())
     setSelectMode(false)

@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
@@ -8,7 +9,7 @@ from openai import OpenAI
 
 from text_generator.prompt_templates import get_full_prompt
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 
 def _build_client() -> Optional[OpenAI]:

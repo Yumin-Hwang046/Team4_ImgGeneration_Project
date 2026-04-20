@@ -5,6 +5,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 import sys
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+
+# Ensure sibling modules are importable in both run modes:
+# - `uvicorn main:app` from `backend/`
+# - `uvicorn backend.main:app` from project root
+BACKEND_DIR = Path(__file__).resolve().parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 # Ensure sibling modules are importable in both run modes:
 # - `uvicorn main:app` from `backend/`
@@ -32,6 +40,21 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Team4 Project Backend", lifespan=lifespan)
+
+# media static serving
+(BACKEND_DIR / "generated").mkdir(parents=True, exist_ok=True)
+(BACKEND_DIR / "uploads").mkdir(parents=True, exist_ok=True)
+
+app.mount(
+    "/media/generated",
+    StaticFiles(directory=str(BACKEND_DIR / "generated")),
+    name="media-generated",
+)
+app.mount(
+    "/media/uploads",
+    StaticFiles(directory=str(BACKEND_DIR / "uploads")),
+    name="media-uploads",
+)
 
 app.include_router(auth_router)
 app.include_router(generations_router)
@@ -73,3 +96,4 @@ except ImportError as e:
 @app.get("/")
 def root():
     return {"message": "Backend is running"}
+

@@ -2,7 +2,7 @@ import json
 from datetime import datetime, date
 from typing import Optional, List
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 import shutil
 
 import requests
@@ -151,7 +151,10 @@ def looks_like_invalid_location(location: Optional[str]) -> bool:
 
     mood_like_values = {
         "sunny", "cloudy", "rainy", "warm",
+        "clean", "trendy", "premium",
+        "Warm", "Clean", "Trendy", "Premium",
         "맑은 날씨", "흐린 날씨", "비 오는 배경", "따뜻한 조명", "따뜻한 감성",
+        "따뜻한", "깔끔한", "트렌디", "프리미엄",
     }
     return value in mood_like_values
 
@@ -479,6 +482,22 @@ def process_regenerate_task(generation_id: int):
 
         recommended_concept = generation.recommended_concept or "기본 추천 컨셉"
 
+        source_image_path = None
+        if generation.original_image_url and generation.original_image_url.startswith("/media/uploads/"):
+            relative_path = unquote(generation.original_image_url.replace("/media/uploads/", "", 1))
+            candidate_path = UPLOAD_DIR / relative_path
+            if candidate_path.exists():
+                source_image_path = str(candidate_path)
+
+        if not source_image_path:
+            generation.generation_status = "FAILED"
+            generation.extra_info = (
+                (generation.extra_info or "")
+                + "\n[ERROR] 재생성 실패: 원본 업로드 이미지를 찾을 수 없습니다."
+            )
+            db.commit()
+            return
+
         raw_image_result = call_image_generator(
             business_category=generation.business_category or "기타",
             menu_name=generation.menu_name or "메뉴",
@@ -486,7 +505,7 @@ def process_regenerate_task(generation_id: int):
             mood=generation.mood,
             recommended_concept=recommended_concept,
             extra_prompt=None,
-            image_path=None,
+            image_path=source_image_path,
         )
         image_result = normalize_image_result(raw_image_result)
 
@@ -680,12 +699,16 @@ async def run_generation(
             detail="target_date 또는 target_time 형식이 올바르지 않습니다. 예: 2026-05-01 / 18:30",
         ) from exc
 
-    uploaded_filename = None
-    if image_file is not None and getattr(image_file, "filename", ""):
-        saved_path = UPLOAD_DIR / image_file.filename
-        with open(saved_path, "wb") as buffer:
-            shutil.copyfileobj(image_file.file, buffer)
-        uploaded_filename = str(saved_path)
+    if image_file is None or not getattr(image_file, "filename", ""):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="현재 이미지 생성 모델(Case4)은 image_file 업로드가 필수입니다.",
+        )
+
+    saved_path = UPLOAD_DIR / image_file.filename
+    with open(saved_path, "wb") as buffer:
+        shutil.copyfileobj(image_file.file, buffer)
+    uploaded_filename = str(saved_path)
 
     post_channel = channel if channel in ("feed", "story") else "feed"
 

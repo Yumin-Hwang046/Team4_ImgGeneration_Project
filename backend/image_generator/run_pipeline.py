@@ -1,31 +1,34 @@
 import argparse
+import shutil
 from pathlib import Path
 
-from inference_base import SDXLBaseGenerator, save_images as save_base_images
+from case4_ip_adapter import generate_image_case4_ip_adapter
+
+DEFAULT_REFERENCE_IMAGE = (
+    Path(__file__).resolve().parent / "reference_presets" / "default.png"
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run image generation pipeline")
+    parser = argparse.ArgumentParser(description="Run image generation pipeline (Case4 IP-Adapter)")
 
     parser.add_argument("--prompt", type=str, required=True, help="Main generation prompt")
-    parser.add_argument(
-        "--negative_prompt",
-        type=str,
-        default=(
-            "egg, mushroom, strange food, mixed dishes, "
-            "deformed, unrealistic, weird texture, blurry, low quality"
-        ),
-        help="Negative prompt",
-    )
     parser.add_argument("--output_dir", type=str, default="outputs", help="Output directory")
-    parser.add_argument("--num_images_per_prompt", type=int, default=1)
-    parser.add_argument("--num_inference_steps", type=int, default=25)
-    parser.add_argument("--guidance_scale", type=float, default=7.5)
-    parser.add_argument("--height", type=int, default=768)
-    parser.add_argument("--width", type=int, default=768)
 
-    # 현재는 안 써도 백엔드에서 넘길 수 있게 자리만 열어둠
-    parser.add_argument("--image_path", type=str, default=None, help="Optional source image path")
+    # 기존 흐름에서 전달되는 사용자 이미지
+    parser.add_argument("--image_path", type=str, default=None, help="User source image path")
+
+    # 무드별 프리셋 이미지 경로 (없으면 기본 프리셋 사용)
+    parser.add_argument(
+        "--reference_image_path",
+        type=str,
+        default=str(DEFAULT_REFERENCE_IMAGE),
+        help="Reference preset image path",
+    )
+
+    parser.add_argument("--format_type", type=str, default="피드")
+    parser.add_argument("--ip_adapter_scale", type=float, default=0.7)
+    parser.add_argument("--strength", type=float, default=0.6)
 
     return parser
 
@@ -37,20 +40,34 @@ def run_pipeline() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    base_generator = SDXLBaseGenerator()
-    base_images = base_generator.generate(
-        prompt=args.prompt,
-        negative_prompt=args.negative_prompt,
-        num_images_per_prompt=args.num_images_per_prompt,
-        num_inference_steps=args.num_inference_steps,
-        guidance_scale=args.guidance_scale,
-        height=args.height,
-        width=args.width,
-    )
-    save_base_images(base_images, str(output_dir), "base")
+    if not args.image_path:
+        raise ValueError("Case4 requires --image_path (user image).")
 
-    print("\n[Pipeline] Base generation done.")
-    print(f"[Pipeline] Check outputs in {output_dir}")
+    user_image_path = Path(args.image_path)
+    if not user_image_path.exists():
+        raise FileNotFoundError(f"User image not found: {user_image_path}")
+
+    ref_path = Path(args.reference_image_path)
+    if not ref_path.exists():
+        # 프리셋 파일이 아직 준비되지 않은 경우, 사용자 이미지를 임시 레퍼런스로 사용
+        ref_path = user_image_path
+
+    result = generate_image_case4_ip_adapter(
+        user_image_path=str(user_image_path),
+        reference_image_path=str(ref_path),
+        user_prompt=args.prompt,
+        format_type=args.format_type,
+        ip_adapter_scale=args.ip_adapter_scale,
+        strength=args.strength,
+    )
+
+    generated_path = Path(result["path"])
+    target_path = output_dir / "base_0.png"
+    shutil.copyfile(generated_path, target_path)
+
+    print("\n[Pipeline] Case4 generation done.")
+    print(f"[Pipeline] Source: {generated_path}")
+    print(f"[Pipeline] Copied to: {target_path}")
 
 
 if __name__ == "__main__":

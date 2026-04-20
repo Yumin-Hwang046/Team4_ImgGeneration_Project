@@ -7,7 +7,14 @@ import { api, GenerationDetailResponse } from '@/lib/api'
 
 const POLL_INTERVAL_MS = 2000
 const MAX_POLLS = 60
+const BACKEND_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
+function resolveImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  if (url.startsWith('/media/')) return `${BACKEND_ORIGIN}${url}`
+  return null
+}
 // ─── Schedule Modal ────────────────────────────────────────────────────────────
 
 type Channel = 'instagram_feed' | 'instagram_story'
