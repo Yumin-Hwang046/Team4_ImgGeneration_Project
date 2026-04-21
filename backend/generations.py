@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, date
 from typing import Optional, List
 from pathlib import Path
@@ -6,8 +7,17 @@ from urllib.parse import quote, unquote
 import shutil
 
 import requests
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
+
+try:
+    import wandb
+except Exception:
+    wandb = None
+
+# backend/.env 읽기
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 from db import get_db, SessionLocal
 from models import Generation, GeneratedImage, User, UserProfile, WeatherDaily
@@ -33,6 +43,54 @@ GENERATED_DIR = BASE_DIR / "generated"
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+
+_WANDB_INITIALIZED = False
+
+
+def _init_wandb_if_needed() -> None:
+    global _WANDB_INITIALIZED
+
+    if wandb is None:
+        return
+
+    if _WANDB_INITIALIZED:
+        return
+
+    try:
+        if getattr(wandb, "run", None) is not None:
+            _WANDB_INITIALIZED = True
+            return
+    except Exception:
+        pass
+
+    api_key = os.getenv("WANDB_API_KEY", "").strip()
+    project = os.getenv("WANDB_PROJECT", "").strip()
+    entity = os.getenv("WANDB_ENTITY", "").strip()
+
+    if not api_key or not project:
+        return
+
+    try:
+        os.environ["WANDB_API_KEY"] = api_key
+        if entity:
+            wandb.init(project=project, entity=entity, job_type="generation-flow")
+        else:
+            wandb.init(project=project, job_type="generation-flow")
+        _WANDB_INITIALIZED = True
+    except Exception:
+        pass
+
+
+def _wandb_log_safe(payload: dict) -> None:
+    if wandb is None:
+        return
+
+    try:
+        _init_wandb_if_needed()
+        if _WANDB_INITIALIZED:
+            wandb.log(payload)
+    except Exception:
+        pass
 
 
 def to_public_media_url(path_str: Optional[str]) -> Optional[str]:
@@ -339,6 +397,16 @@ def process_generation_task(
         if not generation:
             return
 
+        _wandb_log_safe({
+            "trace_stage": "generation_task_start",
+            "generation_id": generation_id,
+            "purpose": purpose,
+            "business_category": business_category,
+            "menu_name": menu_name,
+            "raw_location": location,
+            "has_uploaded_image": bool(uploaded_filename),
+        })
+
         target_dt = parse_target_datetime(target_date, target_time)
 
         resolved_location = resolve_generation_location(
@@ -366,6 +434,14 @@ def process_generation_task(
             target_dt=target_dt,
         )
 
+        _wandb_log_safe({
+            "trace_stage": "generation_context_ready",
+            "generation_id": generation_id,
+            "resolved_location": resolved_location,
+            "weather_summary": weather_summary,
+            "recommended_concept": recommended_concept,
+        })
+
         original_image_url = None
         source_image_path = None
 
@@ -388,6 +464,12 @@ def process_generation_task(
         image_result = normalize_image_result(raw_image_result)
 
         if not image_result["success"]:
+            _wandb_log_safe({
+                "trace_stage": "generation_image_fail",
+                "generation_id": generation_id,
+                "error": image_result.get("error"),
+            })
+
             generation.generation_status = "FAILED"
             generation.extra_info = (
                 (generation.extra_info or "")
@@ -414,6 +496,12 @@ def process_generation_task(
         text_result = normalize_text_result(raw_text_result)
 
         if not text_result["success"]:
+            _wandb_log_safe({
+                "trace_stage": "generation_text_fail",
+                "generation_id": generation_id,
+                "error": text_result.get("error"),
+            })
+
             generation.generation_status = "FAILED"
             generation.extra_info = (
                 (generation.extra_info or "")
@@ -457,9 +545,24 @@ def process_generation_task(
         )
 
         db.add(generated_image)
+
+        _wandb_log_safe({
+            "trace_stage": "generation_task_success",
+            "generation_id": generation_id,
+            "copy_length": len(generated_copy or ""),
+            "hashtags_count": len(hashtags or []),
+            "generated_image_url": generated_image_url,
+        })
+
         db.commit()
 
     except Exception as e:
+        _wandb_log_safe({
+            "trace_stage": "generation_task_exception",
+            "generation_id": generation_id,
+            "error": str(e),
+        })
+
         generation = db.query(Generation).filter(Generation.id == generation_id).first()
         if generation:
             generation.generation_status = "FAILED"
@@ -477,6 +580,11 @@ def process_regenerate_task(generation_id: int):
         if not generation:
             return
 
+        _wandb_log_safe({
+            "trace_stage": "regenerate_task_start",
+            "generation_id": generation_id,
+        })
+
         generation.generation_status = "PENDING"
         db.commit()
 
@@ -490,6 +598,11 @@ def process_regenerate_task(generation_id: int):
                 source_image_path = str(candidate_path)
 
         if not source_image_path:
+            _wandb_log_safe({
+                "trace_stage": "regenerate_task_missing_source",
+                "generation_id": generation_id,
+            })
+
             generation.generation_status = "FAILED"
             generation.extra_info = (
                 (generation.extra_info or "")
@@ -532,9 +645,22 @@ def process_regenerate_task(generation_id: int):
         generation.generation_status = "SUCCESS"
 
         db.add(new_image)
+
+        _wandb_log_safe({
+            "trace_stage": "regenerate_task_success",
+            "generation_id": generation_id,
+            "public_image_url": public_image_url,
+        })
+
         db.commit()
 
     except Exception as e:
+        _wandb_log_safe({
+            "trace_stage": "regenerate_task_exception",
+            "generation_id": generation_id,
+            "error": str(e),
+        })
+
         generation = db.query(Generation).filter(Generation.id == generation_id).first()
         if generation:
             generation.generation_status = "FAILED"
