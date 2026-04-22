@@ -16,7 +16,7 @@ try:
 except Exception:
     wandb = None
 
-from text_generator.prompt_templates import get_full_prompt
+from text_generator.prompt_templates_improved import get_full_prompt
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
@@ -55,6 +55,7 @@ MOOD_TAG_MAP = {
 }
 
 
+
 def _init_wandb_if_needed() -> None:
     global _WANDB_INITIALIZED
 
@@ -86,6 +87,7 @@ def _init_wandb_if_needed() -> None:
         pass
 
 
+
 def _wandb_log_safe(payload: dict) -> None:
     if wandb is None:
         return
@@ -97,6 +99,7 @@ def _wandb_log_safe(payload: dict) -> None:
         pass
 
 
+
 def _build_client() -> Optional[OpenAI]:
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     model_name = os.getenv("TEXT_MODEL_NAME", "").strip()
@@ -105,13 +108,16 @@ def _build_client() -> Optional[OpenAI]:
     return OpenAI(api_key=api_key)
 
 
+
 def _get_model_name() -> Optional[str]:
     model_name = os.getenv("TEXT_MODEL_NAME", "").strip()
     return model_name or None
 
 
+
 def _clean_text(value: Optional[str]) -> str:
     return (value or "").strip()
+
 
 
 def _normalize_hashtags(raw: Any) -> list[str]:
@@ -146,6 +152,7 @@ def _normalize_hashtags(raw: Any) -> list[str]:
     return result[:10]
 
 
+
 def _extract_location_keywords(location: str) -> list[str]:
     location = _clean_text(location)
     if not location:
@@ -167,6 +174,7 @@ def _extract_location_keywords(location: str) -> list[str]:
     return _normalize_hashtags(result)
 
 
+
 def _extract_business_category_keywords(business_category: str) -> list[str]:
     business_category = _clean_text(business_category)
     if not business_category:
@@ -183,6 +191,7 @@ def _extract_business_category_keywords(business_category: str) -> list[str]:
             candidates.extend(tags)
 
     return _normalize_hashtags(candidates)
+
 
 
 def _extract_extra_keywords(extra_prompt: Optional[str]) -> list[str]:
@@ -205,6 +214,7 @@ def _extract_extra_keywords(extra_prompt: Optional[str]) -> list[str]:
     return _normalize_hashtags(candidates)
 
 
+
 def _infer_time_phrase(recommended_concept: str) -> str:
     text = _clean_text(recommended_concept)
     if "저녁" in text:
@@ -214,6 +224,7 @@ def _infer_time_phrase(recommended_concept: str) -> str:
     if "브런치" in text:
         return "이번 주말"
     return "오늘"
+
 
 
 def _infer_weather_phrase(weather_summary: str, season_context: str) -> str:
@@ -234,11 +245,13 @@ def _infer_weather_phrase(weather_summary: str, season_context: str) -> str:
     return "지금 분위기와 잘 어울리는"
 
 
+
 def _pick_location_short(location: str) -> str:
     keywords = _extract_location_keywords(location)
     if keywords:
         return keywords[0]
     return _clean_text(location) or "근처"
+
 
 
 def _trim_copy(text: str, max_len: int = 110) -> str:
@@ -251,6 +264,7 @@ def _trim_copy(text: str, max_len: int = 110) -> str:
     if last_space > 35:
         cut = cut[:last_space]
     return cut.rstrip(" ,") + "..."
+
 
 
 def _build_hashtags(
@@ -289,6 +303,7 @@ def _build_hashtags(
         candidates.extend(purpose_map.get(purpose, []))
 
     return _normalize_hashtags(candidates)[:7]
+
 
 
 def _fallback_copy(
@@ -351,6 +366,7 @@ def _fallback_copy(
     return {"copy": copy, "hashtags": hashtags, "error": None}
 
 
+
 def generate_marketing_copy(
     purpose: str,
     business_category: str,
@@ -406,14 +422,19 @@ def generate_marketing_copy(
     )
 
     try:
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=[
+        request_kwargs = {
+            "model": model_name,
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            response_format={"type": "json_object"},
-        )
+            "response_format": {"type": "json_object"},
+        }
+
+        if not model_name.startswith("gpt-5"):
+            request_kwargs["temperature"] = 0.9
+
+        response = client.chat.completions.create(**request_kwargs)
 
         _wandb_log_safe({
             "trace_stage": "text_generator_model_called",

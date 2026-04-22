@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime, date
 from typing import Optional, List
 from pathlib import Path
@@ -162,76 +163,166 @@ def weather_code_to_text(code: int) -> str:
     return weather_map.get(code, "날씨 정보 없음")
 
 
-def geocode_location(location: str) -> tuple[float, float]:
-    url = "https://geocoding-api.open-meteo.com/v1/search"
-    params = {
-        "name": location,
-        "count": 1,
-        "language": "ko",
-        "format": "json",
+def normalize_location_for_weather(location: str) -> str:
+    value = (location or "").strip()
+    if not value:
+        return "서울"
+
+    value = re.sub(r"\s+", " ", value).strip()
+
+    noisy_tokens = [
+        "대한민국", "한국", "매장", "가게", "본점", "지점",
+        "인스타", "홍보", "감성", "따뜻한", "트렌디", "프리미엄", "깔끔한",
+    ]
+    for token in noisy_tokens:
+        value = value.replace(token, "").strip()
+
+    value = re.sub(r"\s+", " ", value).strip()
+
+    parts = value.split()
+    if len(parts) >= 3:
+        value = " ".join(parts[:3])
+    elif len(parts) >= 2:
+        value = " ".join(parts[:2])
+
+    replacements = {
+        "서울특별시": "서울",
+        "부산광역시": "부산",
+        "대구광역시": "대구",
+        "인천광역시": "인천",
+        "광주광역시": "광주",
+        "대전광역시": "대전",
+        "울산광역시": "울산",
+        "세종특별자치시": "세종",
+        "경기도": "경기",
+        "강원특별자치도": "강원",
+        "충청북도": "충북",
+        "충청남도": "충남",
+        "전북특별자치도": "전북",
+        "전라북도": "전북",
+        "전라남도": "전남",
+        "경상북도": "경북",
+        "경상남도": "경남",
+        "제주특별자치도": "제주",
     }
+    for old, new in replacements.items():
+        value = value.replace(old, new)
 
-    resp = requests.get(url, params=params, timeout=10)
-    resp.raise_for_status()
-    data = resp.json()
+    value = re.sub(r"\s+", " ", value).strip()
+    return value or "서울"
 
-    results = data.get("results")
-    if not results:
-        raise HTTPException(status_code=404, detail=f"지역을 찾을 수 없습니다: {location}")
 
-    lat = results[0]["latitude"]
-    lon = results[0]["longitude"]
-    return lat, lon
+def geocode_location(location: str) -> tuple[float, float]:
+    normalized = normalize_location_for_weather(location)
+
+    candidates = [normalized]
+    parts = normalized.split()
+    if len(parts) >= 2:
+        candidates.append(" ".join(parts[:2]))
+    if len(parts) >= 1:
+        candidates.append(parts[0])
+
+    seen = set()
+    deduped_candidates = []
+    for c in candidates:
+        c = c.strip()
+        if c and c not in seen:
+            seen.add(c)
+            deduped_candidates.append(c)
+
+    last_error = None
+
+    for candidate in deduped_candidates:
+        try:
+            url = "https://geocoding-api.open-meteo.com/v1/search"
+            params = {
+                "name": candidate,
+                "count": 1,
+                "language": "ko",
+                "format": "json",
+            }
+
+            resp = requests.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+
+            results = data.get("results")
+            if results:
+                lat = results[0]["latitude"]
+                lon = results[0]["longitude"]
+                return lat, lon
+        except Exception as e:
+            last_error = e
+            continue
+
+    raise HTTPException(status_code=404, detail=f"지역을 찾을 수 없습니다: {normalized}") from last_error
 
 
 def get_seasonal_weather_fallback(target_dt: datetime) -> str:
     month = target_dt.month
+    hour = target_dt.hour
+
+    time_context = (
+        "점심 이후 외출 수요가 있는 시간대" if 11 <= hour <= 15
+        else "저녁 분위기가 살아나는 시간대" if 17 <= hour <= 21
+        else "일반 시간대"
+    )
 
     if month in [3, 4, 5]:
-        return "봄 예상 날씨, 온화함 / 야외활동 적합"
+        return f"봄 시즌, 온화한 날씨 / 산뜻한 외출 무드 / {time_context}"
     if month in [6, 7, 8]:
-        return "여름 예상 날씨, 더움 / 시원한 실내 수요 증가"
+        return f"여름 시즌, 더운 날씨 / 시원한 실내·청량한 메뉴 선호 / {time_context}"
     if month in [9, 10, 11]:
-        return "가을 예상 날씨, 선선함 / 감성 마케팅 적합"
-    return "겨울 예상 날씨, 추움 / 따뜻한 실내 분위기 강조"
+        return f"가을 시즌, 선선한 날씨 / 감성적인 방문 유도에 적합 / {time_context}"
+    return f"겨울 시즌, 추운 날씨 / 따뜻하고 포근한 분위기 강조 / {time_context}"
 
 
-def get_profile_region_text(profile: UserProfile) -> str:
-    return " ".join(
-        [value for value in [profile.sido, profile.sigungu, profile.emd] if value]
-    ).strip() or profile.road_address
+def get_profile_region_text(profile: Optional[UserProfile]) -> Optional[str]:
+    if not profile:
+        return None
+
+    road = (profile.road_address or "").strip()
+    if road:
+        return road
+
+    parts = [
+        (profile.sido or "").strip(),
+        (profile.sigungu or "").strip(),
+        (profile.emd or "").strip(),
+    ]
+    region = " ".join([p for p in parts if p])
+    return region or None
 
 
-def looks_like_invalid_location(location: Optional[str]) -> bool:
-    value = (location or "").strip()
-    if not value:
+def looks_like_invalid_location(text: str) -> bool:
+    t = (text or "").strip()
+    if not t:
         return True
 
-    mood_like_values = {
-        "sunny", "cloudy", "rainy", "warm",
-        "clean", "trendy", "premium",
-        "Warm", "Clean", "Trendy", "Premium",
-        "맑은 날씨", "흐린 날씨", "비 오는 배경", "따뜻한 조명", "따뜻한 감성",
-        "따뜻한", "깔끔한", "트렌디", "프리미엄",
-    }
-    return value in mood_like_values
+    bad_keywords = [
+        "감성", "분위기", "따뜻한", "트렌디", "프리미엄", "홍보",
+        "이벤트", "메뉴", "카페", "베이커리", "한식", "디저트"
+    ]
+    return any(k in t for k in bad_keywords) and len(t.split()) <= 3
 
 
-def resolve_generation_location(db: Session, user_id: int, requested_location: Optional[str]) -> str:
-    requested_location = (requested_location or "").strip()
+def resolve_generation_location(
+    db: Session,
+    user_id: int,
+    requested_location: str,
+) -> str:
+    requested = (requested_location or "").strip()
 
-    if requested_location and not looks_like_invalid_location(requested_location):
-        return requested_location
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+    profile_region = get_profile_region_text(profile)
 
-    profile = (
-        db.query(UserProfile)
-        .filter(UserProfile.user_id == user_id)
-        .first()
-    )
-    if profile:
-        return get_profile_region_text(profile)
+    if not requested:
+        return profile_region or "서울특별시"
 
-    return requested_location or "서울"
+    if looks_like_invalid_location(requested) and profile_region:
+        return profile_region
+
+    return requested
 
 
 def get_weather_summary_from_storage_for_generation(
@@ -260,6 +351,70 @@ def get_weather_summary_from_storage_for_generation(
         return row.weather_summary
 
     return None
+
+
+def classify_weather_flags(weather_text: str, temperature, precipitation_probability) -> dict:
+    temp = None
+    pop = None
+
+    try:
+        temp = float(temperature)
+    except Exception:
+        pass
+
+    try:
+        pop = int(float(precipitation_probability))
+    except Exception:
+        pass
+
+    is_rainy = any(keyword in weather_text for keyword in ["비", "소나기", "이슬비", "뇌우"])
+    is_snowy = "눈" in weather_text
+    is_clear = any(keyword in weather_text for keyword in ["맑음", "대체로 맑음"])
+    is_cloudy = any(keyword in weather_text for keyword in ["흐림", "안개"])
+
+    is_hot = temp is not None and temp >= 26
+    is_warm = temp is not None and 18 <= temp < 26
+    is_cold = temp is not None and temp <= 9
+
+    high_precip = pop is not None and pop >= 50
+
+    return {
+        "temp": temp,
+        "pop": pop,
+        "is_rainy": is_rainy,
+        "is_snowy": is_snowy,
+        "is_clear": is_clear,
+        "is_cloudy": is_cloudy,
+        "is_hot": is_hot,
+        "is_warm": is_warm,
+        "is_cold": is_cold,
+        "high_precip": high_precip,
+    }
+
+
+def build_weather_summary(weather_text: str, temperature, precipitation_probability) -> str:
+    flags = classify_weather_flags(weather_text, temperature, precipitation_probability)
+
+    temp_text = f"{int(flags['temp'])}°C" if flags["temp"] is not None else "기온 정보 없음"
+    pop_text = f"강수확률 {flags['pop']}%" if flags["pop"] is not None else "강수확률 정보 없음"
+
+    extra_context = ""
+    if flags["is_rainy"] or flags["high_precip"]:
+        extra_context = "실내 머무르기 좋은 분위기"
+    elif flags["is_clear"] and flags["is_warm"]:
+        extra_context = "산뜻하게 외출하기 좋은 분위기"
+    elif flags["is_clear"]:
+        extra_context = "밝은 자연광이 잘 어울리는 분위기"
+    elif flags["is_hot"]:
+        extra_context = "시원한 메뉴와 실내 선호도가 높아지는 날씨"
+    elif flags["is_cold"]:
+        extra_context = "따뜻한 메뉴와 포근한 무드가 잘 어울리는 날씨"
+    elif flags["is_cloudy"]:
+        extra_context = "차분한 무드 연출에 어울리는 날씨"
+
+    if extra_context:
+        return f"{weather_text}, {temp_text}, {pop_text} / {extra_context}"
+    return f"{weather_text}, {temp_text}, {pop_text}"
 
 
 def get_weather_summary_for_generation(
@@ -305,15 +460,23 @@ def get_weather_summary(location: str, target_dt: datetime) -> str:
         codes = hourly.get("weather_code", [])
         pops = hourly.get("precipitation_probability", [])
 
+        if not times:
+            return "날씨 조회 실패(기본 추천 로직으로 진행)"
+
         target_hour = target_dt.strftime("%Y-%m-%dT%H:00")
 
-        idx = times.index(target_hour) if target_hour in times else 0
+        if target_hour in times:
+            idx = times.index(target_hour)
+        else:
+            target_date_prefix = target_dt.strftime("%Y-%m-%dT")
+            same_day_indices = [i for i, t in enumerate(times) if t.startswith(target_date_prefix)]
+            idx = same_day_indices[0] if same_day_indices else 0
 
         weather_text = weather_code_to_text(codes[idx]) if idx < len(codes) else "정보 없음"
-        temp = temps[idx] if idx < len(temps) else "?"
-        pop = pops[idx] if idx < len(pops) else "?"
+        temp = temps[idx] if idx < len(temps) else None
+        pop = pops[idx] if idx < len(pops) else None
 
-        return f"{weather_text}, {temp}°C, 강수확률 {pop}%"
+        return build_weather_summary(weather_text, temp, pop)
 
     except Exception:
         return "날씨 조회 실패(기본 추천 로직으로 진행)"
@@ -329,30 +492,82 @@ def recommend_concept(
     target_dt: datetime,
 ) -> str:
     hour = target_dt.hour
+
     time_context = (
         "점심 시간대" if 11 <= hour <= 14
+        else "오후 시간대" if 15 <= hour <= 16
         else "저녁 시간대" if 17 <= hour <= 21
         else "일반 시간대"
     )
 
-    if "카페" in business_category:
-        if "비" in weather_summary:
-            base = "비 오는 날 감성 카페 분위기, 따뜻한 음료 중심"
-        elif "맑음" in weather_summary:
-            base = "햇살 좋은 날 감성 디저트/음료 중심"
+    business_text = (business_category or "").strip()
+    menu_text = (menu_name or "").strip()
+
+    is_rainy = any(keyword in weather_summary for keyword in ["비", "소나기", "이슬비", "뇌우"])
+    is_snowy = "눈" in weather_summary
+    is_clear = any(keyword in weather_summary for keyword in ["맑음", "대체로 맑음"])
+    is_cloudy = any(keyword in weather_summary for keyword in ["흐림", "안개"])
+    is_hot = any(keyword in weather_summary for keyword in ["시원한 메뉴", "더운 날씨"])
+    is_cold = any(keyword in weather_summary for keyword in ["따뜻한 메뉴", "추운 날씨"])
+
+    if "카페" in business_text or "디저트" in business_text or "베이커리" in business_text:
+        if is_rainy:
+            base = "비 오는 날에도 머물고 싶어지는 실내 감성, 따뜻한 음료·디저트 중심"
+        elif is_snowy:
+            base = "포근한 계절감이 드러나는 겨울 디저트·음료 무드 중심"
+        elif is_clear and hour < 17:
+            base = "햇살과 자연광이 잘 어울리는 밝은 디저트·음료 중심"
+        elif is_clear and hour >= 17:
+            base = "맑은 날 마무리에 어울리는 편안한 카페 무드 중심"
+        elif is_hot:
+            base = "시원한 음료와 가벼운 디저트가 잘 어울리는 청량한 무드 중심"
+        elif is_cold:
+            base = "따뜻한 메뉴와 포근한 실내 분위기가 잘 살아나는 무드 중심"
+        elif is_cloudy:
+            base = "차분한 분위기와 감성적인 톤이 잘 어울리는 카페 무드 중심"
         else:
-            base = "계절감이 드러나는 카페 무드 중심"
-    elif "주점" in business_category or "이자카야" in business_category:
+            base = "계절감과 공간 무드를 함께 살리는 카페·디저트 중심"
+
+    elif "한식" in business_text or "분식" in business_text or "식당" in business_text:
+        if is_rainy:
+            base = "날씨 영향으로 실내 식사 선호도가 높아지는 날, 든든한 한 끼 중심"
+        elif is_cold:
+            base = "따뜻하고 든든한 메뉴 만족감을 강조하는 한 끼 중심"
+        elif is_hot:
+            base = "부담 없이 즐기기 좋은 식사와 편안한 실내 중심"
+        else:
+            base = "한 끼 만족감과 메뉴 매력을 강조하는 실사용 유입형 홍보"
+
+    elif "주점" in business_text or "이자카야" in business_text or "술집" in business_text:
         if hour >= 18:
-            base = "퇴근 후/저녁 모임 유도, 분위기 있는 매장 컷 중심"
+            if is_rainy or is_cloudy:
+                base = "저녁 모임과 분위기 있는 실내 컷에 어울리는 감성 중심"
+            else:
+                base = "퇴근 후 가볍게 찾기 좋은 저녁 모임 무드 중심"
         else:
             base = "캐주얼한 술자리 예고형 콘텐츠"
-    else:
-        base = "메뉴 중심의 실사용 유입형 홍보 이미지"
 
-    if mood:
-        return f"{base} / {time_context} / 무드 반영: {mood} / 대표 메뉴 강조: {menu_name}"
-    return f"{base} / {time_context} / {season_context} / 대표 메뉴 강조: {menu_name}"
+    else:
+        if is_rainy:
+            base = "날씨 영향을 반영한 실내 방문 유도형 콘텐츠"
+        elif is_clear:
+            base = "밝고 산뜻한 분위기의 메뉴 중심 홍보 이미지"
+        else:
+            base = "메뉴 중심의 실사용 유입형 홍보 이미지"
+
+    purpose_hint = {
+        "방문 유도": "지금 들르기 좋은 이유 강조",
+        "신메뉴 홍보": "새로운 포인트 강조",
+        "이벤트 홍보": "지금 확인할 이유 강조",
+        "매장 홍보": "공간 분위기와 메뉴 매력 균형 강조",
+    }.get(purpose, "목적에 맞는 매력 포인트 강조")
+
+    mood_part = f"무드 반영: {mood}" if mood else season_context
+
+    return (
+        f"{base} / {time_context} / {purpose_hint} / "
+        f"{mood_part} / 대표 메뉴 강조: {menu_text}"
+    )
 
 
 def safe_load_hashtags(value) -> list:
