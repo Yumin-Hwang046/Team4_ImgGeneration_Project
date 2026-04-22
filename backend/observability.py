@@ -94,6 +94,18 @@ def to_langfuse_media(path: str) -> Optional[str]:
         return None
 
 
+def build_langfuse_media_list(paths: list[str]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for path in paths:
+        items.append(
+            {
+                "path": path,
+                "media": to_langfuse_media(path),
+            }
+        )
+    return items
+
+
 def log_langfuse_trace(
     name: str,
     input: dict[str, Any],
