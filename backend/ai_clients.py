@@ -156,6 +156,11 @@ def _resolve_reference_preset_path(mood: Optional[str], reference_preset: Option
     return REFERENCE_PRESET_DIR / "default.png"
 
 
+def _resolve_warm_choice(reference_preset: Optional[str]) -> str:
+    filename = Path(reference_preset or "1.png").stem
+    return filename if filename in {"1", "2", "3", "4"} else "1"
+
+
 def _fallback_text_result(
     purpose: str,
     business_category: str,
@@ -220,10 +225,10 @@ def call_image_generator(
     recommended_concept: str,
     extra_prompt: Optional[str] = None,
     image_path: Optional[str] = None,
+    format_type: str = "feed",
 ) -> Dict:
     """
-    실제 이미지 생성 파이프라인(run_pipeline.py) 호출.
-    모델 미연결 시 더미 이미지로 폴백.
+    우선순위: exp16 API 이미지 파이프라인 -> 기존 로컬 파이프라인 -> 더미 이미지.
     """
     try:
         prompt = _build_image_prompt(
@@ -234,6 +239,24 @@ def call_image_generator(
             recommended_concept=recommended_concept,
             extra_prompt=extra_prompt,
         )
+
+        if image_path:
+            from image_generator.exp16_gpt_image_mini import generate_image_exp16_api
+
+            run_name = f"{_safe_slug(menu_name)}_{_safe_slug(business_category)}"
+            exp16_result = generate_image_exp16_api(
+                user_image_path=str(image_path),
+                warm_choice=_resolve_warm_choice(reference_preset),
+                user_prompt=prompt,
+                format_type=format_type,
+                output_subdir=run_name,
+            )
+            return {
+                "success": True,
+                "image_url": exp16_result["path"],
+                "prompt_used": prompt,
+                "error": None,
+            }
 
         run_name = f"{_safe_slug(menu_name)}_{_safe_slug(business_category)}"
         output_dir = GENERATED_DIR / run_name
