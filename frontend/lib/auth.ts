@@ -83,3 +83,14 @@ export function getStoredLng(): string {
 export function setStoredLng(lng: string): void {
   localStorage.setItem(LNG_KEY, lng)
 }
+
+export const MOOD_KEY = 'stored_mood'
+
+export function getStoredMood(): string {
+  if (typeof window === 'undefined') return ''
+  return localStorage.getItem(MOOD_KEY) ?? ''
+}
+
+export function setStoredMood(mood: string): void {
+  localStorage.setItem(MOOD_KEY, mood)
+}
