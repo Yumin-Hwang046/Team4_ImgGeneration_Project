@@ -6,11 +6,63 @@ from typing import Dict, Optional, Any
 import requests
 from dotenv import load_dotenv
 
+try:
+    import wandb
+except Exception:
+    wandb = None
+
+# backend/.env 읽기
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
-# -----------------------------
-# ENV
-# -----------------------------
+_WANDB_INITIALIZED = False
+
+
+def _init_wandb_if_needed() -> None:
+    global _WANDB_INITIALIZED
+
+    if wandb is None:
+        return
+
+    if _WANDB_INITIALIZED:
+        return
+
+    try:
+        if getattr(wandb, "run", None) is not None:
+            _WANDB_INITIALIZED = True
+            return
+    except Exception:
+        pass
+
+    api_key = os.getenv("WANDB_API_KEY", "").strip()
+    project = os.getenv("WANDB_PROJECT", "").strip()
+    entity = os.getenv("WANDB_ENTITY", "").strip()
+
+    if not api_key or not project:
+        return
+
+    try:
+        os.environ["WANDB_API_KEY"] = api_key
+        if entity:
+            wandb.init(project=project, entity=entity, job_type="ai-clients")
+        else:
+            wandb.init(project=project, job_type="ai-clients")
+        _WANDB_INITIALIZED = True
+    except Exception:
+        pass
+
+
+def _wandb_log_safe(payload: dict) -> None:
+    if wandb is None:
+        return
+
+    try:
+        _init_wandb_if_needed()
+        if _WANDB_INITIALIZED:
+            wandb.log(payload)
+    except Exception:
+        pass
+
+
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(os.getenv("MODEL_PROJECT_ROOT", str(BASE_DIR.parent)))
 IMAGE_PIPELINE_SCRIPT = Path(
@@ -42,9 +94,6 @@ IMAGE_GENERATOR_URL = os.getenv("IMAGE_GENERATOR_URL", "").strip()
 DUMMY_IMAGE_URL = "https://dummyimage.com/1080x1080/6BA4B8/FFFFFF.jpg"
 
 
-# -----------------------------
-# Helpers
-# -----------------------------
 def _safe_slug(text: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in text)[:50]
 
@@ -233,10 +282,14 @@ def call_image_generator(
     extra_prompt: Optional[str] = None,
     image_path: Optional[str] = None,
 ) -> Dict:
-    """
-    실제 이미지 생성 파이프라인(run_pipeline.py) 호출.
-    모델 미연결 시 더미 이미지로 폴백.
-    """
+    _wandb_log_safe({
+        "trace_stage": "call_image_generator_start",
+        "business_category": business_category,
+        "menu_name": menu_name,
+        "location": location,
+        "has_input_image": bool(image_path),
+    })
+
     try:
         prompt = _build_image_prompt(
             business_category=business_category,
@@ -272,6 +325,11 @@ def call_image_generator(
         if result.returncode == 0:
             output_image = _find_output_image(output_dir)
             if output_image is not None:
+                _wandb_log_safe({
+                    "trace_stage": "call_image_generator_success",
+                    "menu_name": menu_name,
+                    "used_dummy": False,
+                })
                 return {
                     "success": True,
                     "image_url": str(output_image),
@@ -279,7 +337,11 @@ def call_image_generator(
                     "error": None,
                 }
 
-        # 파이프라인 실패 → 더미 이미지 폴백
+        _wandb_log_safe({
+            "trace_stage": "call_image_generator_dummy_fallback",
+            "menu_name": menu_name,
+            "used_dummy": True,
+        })
         return {
             "success": True,
             "image_url": DUMMY_IMAGE_URL,
@@ -287,7 +349,12 @@ def call_image_generator(
             "error": None,
         }
 
-    except Exception:
+    except Exception as e:
+        _wandb_log_safe({
+            "trace_stage": "call_image_generator_exception",
+            "menu_name": menu_name,
+            "error": str(e),
+        })
         return {
             "success": True,
             "image_url": DUMMY_IMAGE_URL,
@@ -296,9 +363,6 @@ def call_image_generator(
         }
 
 
-# =========================
-# TEXT GENERATOR
-# =========================
 def _call_local_text_generator(
     purpose: str,
     business_category: str,
@@ -369,9 +433,13 @@ def call_text_generator(
     recommended_concept: str,
     extra_prompt: Optional[str] = None,
 ) -> Dict:
-    """
-    우선순위: 로컬 text_generator → HTTP → 규칙 기반 fallback
-    """
+    _wandb_log_safe({
+        "trace_stage": "call_text_generator_start",
+        "purpose": purpose,
+        "business_category": business_category,
+        "menu_name": menu_name,
+    })
+
     payload = {
         "purpose": purpose,
         "business_category": business_category,
@@ -386,11 +454,27 @@ def call_text_generator(
 
     local_result = _call_local_text_generator(**payload)
     if local_result["success"]:
+        _wandb_log_safe({
+            "trace_stage": "call_text_generator_local_success",
+            "menu_name": menu_name,
+        })
         return local_result
 
     remote_result = _call_remote_text_generator(payload)
     if remote_result["success"]:
+        _wandb_log_safe({
+            "trace_stage": "call_text_generator_remote_success",
+            "menu_name": menu_name,
+        })
         return remote_result
+
+    _wandb_log_safe({
+        "trace_stage": "call_text_generator_rule_fallback",
+        "menu_name": menu_name,
+        "purpose": purpose,
+        "local_error": local_result.get("error"),
+        "remote_error": remote_result.get("error"),
+    })
 
     return _fallback_text_result(
         purpose=purpose,
