@@ -602,7 +602,9 @@ def process_generation_task(
     target_date: str,
     target_time: Optional[str],
     mood: Optional[str],
+    reference_preset: Optional[str],
     extra_prompt: Optional[str],
+    channel: Optional[str] = None,
     uploaded_filename: Optional[str] = None,
 ):
     db = SessionLocal()
@@ -672,9 +674,11 @@ def process_generation_task(
             menu_name=menu_name,
             location=resolved_location,
             mood=mood,
+            reference_preset=reference_preset,
             recommended_concept=recommended_concept,
             extra_prompt=extra_prompt,
             image_path=source_image_path,
+            format_type=channel or "feed",
         )
         image_result = normalize_image_result(raw_image_result)
 
@@ -831,9 +835,11 @@ def process_regenerate_task(generation_id: int):
             menu_name=generation.menu_name or "메뉴",
             location=generation.location or "지역",
             mood=generation.mood,
+            reference_preset=None,
             recommended_concept=recommended_concept,
             extra_prompt=None,
             image_path=source_image_path,
+            format_type=generation.image_mode or "feed",
         )
         image_result = normalize_image_result(raw_image_result)
 
@@ -1026,6 +1032,7 @@ async def run_generation(
     target_date: str = Form(...),
     target_time: Optional[str] = Form(None),
     mood: Optional[str] = Form(None),
+    reference_preset: Optional[str] = Form(None),
     extra_prompt: Optional[str] = Form(None),
     channel: Optional[str] = Form(None),
     image_file: Optional[UploadFile] = File(None),
@@ -1043,7 +1050,7 @@ async def run_generation(
     if image_file is None or not getattr(image_file, "filename", ""):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="현재 이미지 생성 모델(Case4)은 image_file 업로드가 필수입니다.",
+            detail="현재 이미지 생성 모델(exp16 API)은 image_file 업로드가 필수입니다.",
         )
 
     saved_path = UPLOAD_DIR / image_file.filename
@@ -1079,7 +1086,9 @@ async def run_generation(
         target_date,
         target_time,
         mood,
+        reference_preset,
         extra_prompt,
+        post_channel,
         uploaded_filename,
     )
 

@@ -168,24 +168,47 @@ def _find_output_image(output_dir: Path) -> Optional[Path]:
     return sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)[0]
 
 
-def _resolve_reference_preset_path(mood: Optional[str]) -> Path:
+def _normalize_mood_key(mood: Optional[str]) -> str:
     mood_key = _clean_text(mood).lower()
-    preset_map = {
-        "warm": "warm.png",
-        "clean": "clean.png",
-        "trendy": "trendy.png",
-        "premium": "premium.png",
-        "따뜻한": "warm.png",
-        "깔끔한": "clean.png",
-        "트렌디": "trendy.png",
-        "프리미엄": "premium.png",
+    mood_map = {
+        "warm": "warm",
+        "clean": "clean",
+        "trendy": "trendy",
+        "premium": "premium",
+        "따뜻한": "warm",
+        "깔끔한": "clean",
+        "트렌디": "trendy",
+        "프리미엄": "premium",
     }
-    filename = preset_map.get(mood_key, "default.png")
-    candidate = REFERENCE_PRESET_DIR / filename
+    return mood_map.get(mood_key, "warm")
 
-    if candidate.exists():
-        return candidate
+
+def _resolve_reference_preset_path(mood: Optional[str], reference_preset: Optional[str]) -> Path:
+    mood_key = _normalize_mood_key(mood)
+    mood_dir = REFERENCE_PRESET_DIR / mood_key
+
+    # 경로 탈출 방지: 파일명만 사용
+    safe_filename = Path(reference_preset).name if reference_preset else "1.png"
+    requested = mood_dir / safe_filename
+    if requested.exists():
+        return requested
+
+    for fallback_name in ("1.png", "2.png", "3.png", "4.png"):
+        fallback = mood_dir / fallback_name
+        if fallback.exists():
+            return fallback
+
+    # 기존 단일 파일 구조와의 호환
+    legacy = REFERENCE_PRESET_DIR / f"{mood_key}.png"
+    if legacy.exists():
+        return legacy
+
     return REFERENCE_PRESET_DIR / "default.png"
+
+
+def _resolve_warm_choice(reference_preset: Optional[str]) -> str:
+    filename = Path(reference_preset or "1.png").stem
+    return filename if filename in {"1", "2", "3", "4"} else "1"
 
 
 def _fallback_text_result(
@@ -278,9 +301,11 @@ def call_image_generator(
     menu_name: str,
     location: str,
     mood: Optional[str],
+    reference_preset: Optional[str],
     recommended_concept: str,
     extra_prompt: Optional[str] = None,
     image_path: Optional[str] = None,
+    format_type: str = "feed",
 ) -> Dict:
     _wandb_log_safe({
         "trace_stage": "call_image_generator_start",
@@ -289,7 +314,9 @@ def call_image_generator(
         "location": location,
         "has_input_image": bool(image_path),
     })
-
+    """
+    우선순위: exp16 API 이미지 파이프라인 -> 기존 로컬 파이프라인 -> 더미 이미지.
+    """
     try:
         prompt = _build_image_prompt(
             business_category=business_category,
@@ -299,6 +326,24 @@ def call_image_generator(
             recommended_concept=recommended_concept,
             extra_prompt=extra_prompt,
         )
+
+        if image_path:
+            from image_generator.exp16_gpt_image_mini import generate_image_exp16_api
+
+            run_name = f"{_safe_slug(menu_name)}_{_safe_slug(business_category)}"
+            exp16_result = generate_image_exp16_api(
+                user_image_path=str(image_path),
+                warm_choice=_resolve_warm_choice(reference_preset),
+                user_prompt=prompt,
+                format_type=format_type,
+                output_subdir=run_name,
+            )
+            return {
+                "success": True,
+                "image_url": exp16_result["path"],
+                "prompt_used": prompt,
+                "error": None,
+            }
 
         run_name = f"{_safe_slug(menu_name)}_{_safe_slug(business_category)}"
 
@@ -314,7 +359,7 @@ def call_image_generator(
             str(IMAGE_PIPELINE_SCRIPT),
             "--prompt", prompt,
             "--output_dir", str(output_dir),
-            "--reference_image_path", str(_resolve_reference_preset_path(mood)),
+            "--reference_image_path", str(_resolve_reference_preset_path(mood, reference_preset)),
         ]
 
         if image_path:
