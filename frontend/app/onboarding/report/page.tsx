@@ -336,15 +336,6 @@ export default function ReportPage() {
           </div>
         </section>
 
-        <div className="flex justify-center mt-12 mb-20">
-          <Link
-            href="/onboarding/personas"
-            className="px-12 py-4 rounded-full border border-outline text-on-surface text-sm font-bold uppercase tracking-widest hover:bg-on-surface hover:text-white transition-all flex items-center gap-2"
-          >
-            더보기
-            <span className="material-symbols-outlined text-lg">expand_more</span>
-          </Link>
-        </div>
       </main>
 
       <footer className="max-w-screen-xl mx-auto px-6 py-12 border-t border-outline-variant/10 text-center">

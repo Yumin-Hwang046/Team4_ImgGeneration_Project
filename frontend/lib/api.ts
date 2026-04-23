@@ -174,6 +174,7 @@ export interface InstagramUploadResponse {
   channel: string
   status: string
   message: string
+  permalink?: string | null
 }
 
 export interface InstagramScheduleStatusResponse {

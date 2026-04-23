@@ -156,13 +156,27 @@ def upload_to_instagram(
         raise HTTPException(status_code=400, detail="업로드할 이미지가 없습니다.")
 
     caption = _build_caption(generation)
-    _publish_media(ig_account_id, access_token, generation.generated_image_url, caption, channel)
+    media_id = _publish_media(ig_account_id, access_token, generation.generated_image_url, caption, channel)
+
+    permalink = None
+    if media_id:
+        try:
+            pres = http_requests.get(
+                f"{GRAPH_API}/{media_id}",
+                params={"fields": "permalink", "access_token": access_token},
+                timeout=10,
+            )
+            if pres.ok:
+                permalink = pres.json().get("permalink")
+        except Exception:
+            pass
 
     return InstagramUploadResponse(
         generation_id=generation.id,
         channel=channel,
         status="SUCCESS",
         message="Instagram 업로드 완료",
+        permalink=permalink,
     )
 
 

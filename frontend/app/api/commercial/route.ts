@@ -120,7 +120,10 @@ async function fetchSeoulDemographic(dongName: string, seoulKey: string) {
       .map(r => r.STDR_YYQU_CD ?? '')
       .sort((a, b) => b.localeCompare(a))[0]
 
-    const matchedRows = allRows.filter(r => r.ADSTRD_CD_NM === dongName)
+    const matchedRows = allRows.filter(r => {
+      const apiName = r.ADSTRD_CD_NM ?? ''
+      return apiName === dongName || apiName.includes(dongName) || dongName.includes(apiName)
+    })
     const latestMatch = matchedRows.filter(r => r.STDR_YYQU_CD === latestQuarter)
 
     const row = latestMatch[0] ?? matchedRows.sort(

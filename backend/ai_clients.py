@@ -88,6 +88,9 @@ GENERATED_DIR = (
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 TEXT_GENERATOR_URL = os.getenv("TEXT_GENERATOR_URL", "").strip()
+IMAGE_GENERATOR_URL = os.getenv("IMAGE_GENERATOR_URL", "").strip()
+
+# 모델 미연결 시 사용할 더미 이미지 (직접 서빙 JPEG)
 DUMMY_IMAGE_URL = "https://dummyimage.com/1080x1080/6BA4B8/FFFFFF.jpg"
 
 
@@ -237,6 +240,39 @@ def _fallback_text_result(
     }
 
 
+# =========================
+# IMAGE GENERATOR
+# =========================
+def _call_remote_image_generator(prompt: str, run_name: str) -> Optional[Dict]:
+    if not IMAGE_GENERATOR_URL:
+        return None
+    try:
+        resp = requests.post(
+            IMAGE_GENERATOR_URL,
+            json={"prompt": prompt},
+            timeout=120,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        image_b64 = data.get("image_base64")
+        if not image_b64:
+            return None
+
+        import base64
+        output_dir = GENERATED_DIR / run_name
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "base_0.png"
+        output_path.write_bytes(base64.b64decode(image_b64))
+        return {
+            "success": True,
+            "image_url": str(output_path),
+            "prompt_used": data.get("prompt_used", prompt),
+            "error": None,
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 def call_image_generator(
     business_category: str,
     menu_name: str,
@@ -265,6 +301,11 @@ def call_image_generator(
         )
 
         run_name = f"{_safe_slug(menu_name)}_{_safe_slug(business_category)}"
+
+        remote = _call_remote_image_generator(prompt, run_name)
+        if remote and remote.get("success"):
+            return remote
+
         output_dir = GENERATED_DIR / run_name
         output_dir.mkdir(parents=True, exist_ok=True)
 

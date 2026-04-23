@@ -1,11 +1,12 @@
-from dotenv import load_dotenv
-load_dotenv()
-
-from contextlib import asynccontextmanager
-from pathlib import Path
-import sys
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv                                                                                                
+load_dotenv()                                                                                                                 
+from contextlib import asynccontextmanager                                                                                  
+from pathlib import Path                                                                                                      
+import sys              
+import os                                                                                                              
+from fastapi import FastAPI                              
+from fastapi.staticfiles import StaticFiles                                                                                   
+from fastapi.middleware.cors import CORSMiddleware
 
 # Ensure sibling modules are importable in both run modes:
 # - `uvicorn main:app` from `backend/`
@@ -40,6 +41,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Team4 Project Backend", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://team4-img-generation-project-w6nw.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # media static serving
 (BACKEND_DIR / "generated").mkdir(parents=True, exist_ok=True)
