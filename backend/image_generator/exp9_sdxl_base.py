@@ -30,7 +30,7 @@ JOBS = [
         "name": "waffle_on_1_dish_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_와플_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "1_dish_bg.png",
-        "object_scale": 1.46,
+        "object_scale": 0.64,
         "anchor_x": 0.50,
         "anchor_y": 0.47,
         "bg_scale": 1.22,
@@ -46,7 +46,7 @@ JOBS = [
         "name": "waffle_on_2_dish_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_와플_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "2_dish_bg.png",
-        "object_scale": 1.34,
+        "object_scale": 0.60,
         "anchor_x": 0.50,
         "anchor_y": 0.78,
         "bg_scale": 1.40,
@@ -62,7 +62,7 @@ JOBS = [
         "name": "drink_on_3_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_음료_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "3_bg.webp",
-        "object_scale": 1.08,
+        "object_scale": 0.52,
         "anchor_x": 0.50,
         "anchor_y": 0.56,
         "bg_scale": 1.18,
@@ -78,7 +78,7 @@ JOBS = [
         "name": "cake_on_4_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_케이크_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "4_bg.webp",
-        "object_scale": 0.68,
+        "object_scale": 0.44,
         "anchor_x": 0.73,
         "anchor_y": 0.76,
         "bg_scale": 1.34,
@@ -128,6 +128,23 @@ def prepare_background(image: Image.Image, bg_scale: float, focus_x: float, focu
     return resized.crop((left, top, left + FRAME_SIZE, top + FRAME_SIZE))
 
 
+def resolve_existing_path(path: Path) -> Path:
+    if path.exists():
+        return path
+    nested_candidate = path.parent / "exp1_rembg" / path.name
+    if nested_candidate.exists():
+        return nested_candidate
+    raise FileNotFoundError(path)
+
+
+def crop_to_bbox(image: Image.Image) -> Image.Image:
+    alpha = image.getchannel("A")
+    bbox = alpha.getbbox()
+    if bbox:
+        return image.crop(bbox)
+    return image
+
+
 def fit_object(obj: Image.Image, frame_size: int, object_scale: float) -> Image.Image:
     ow, oh = obj.size
     ratio = min((frame_size * object_scale) / ow, (frame_size * object_scale) / oh)
@@ -136,13 +153,14 @@ def fit_object(obj: Image.Image, frame_size: int, object_scale: float) -> Image.
 
 def build_initial_composite(job: dict[str, object]) -> Image.Image:
     bg = prepare_background(
-        Image.open(Path(job["background"])).convert("RGB"),
+        Image.open(resolve_existing_path(Path(job["background"]))).convert("RGB"),
         float(job["bg_scale"]),
         float(job["bg_focus_x"]),
         float(job["bg_focus_y"]),
     )
+    obj_raw = Image.open(resolve_existing_path(Path(job["object"]))).convert("RGBA")
     obj = fit_object(
-        Image.open(Path(job["object"])).convert("RGBA"),
+        crop_to_bbox(obj_raw),
         FRAME_SIZE,
         float(job["object_scale"]),
     )
@@ -174,8 +192,9 @@ def load_pipeline() -> AutoPipelineForImage2Image:
     print(f"loading model: {model_path}")
     pipe = AutoPipelineForImage2Image.from_pretrained(model_path, **kwargs)
     pipe.enable_attention_slicing()
-    pipe.enable_vae_slicing()
-    pipe.enable_vae_tiling()
+    if hasattr(pipe, "vae"):
+        pipe.vae.enable_slicing()
+        pipe.vae.enable_tiling()
     if device == "cuda":
         pipe.enable_model_cpu_offload()
     else:

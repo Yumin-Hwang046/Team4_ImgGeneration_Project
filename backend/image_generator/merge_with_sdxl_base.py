@@ -29,8 +29,8 @@ JOBS = [
         "name": "waffle_on_1_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_와플_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "1_bg.webp",
-        "scale": 0.50,
-        "offset_y": 0.10,
+        "scale": 0.32,
+        "offset_y": 0.15,
         "prompt": (
             "A realistic waffle dessert naturally arranged on the cafe table, "
             "preserve the waffle exactly, warm bakery atmosphere, coherent plate contact, "
@@ -41,8 +41,8 @@ JOBS = [
         "name": "waffle_on_2_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_와플_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "2_bg.png",
-        "scale": 0.44,
-        "offset_y": 0.10,
+        "scale": 0.30,
+        "offset_y": 0.18,
         "prompt": (
             "A realistic waffle dessert naturally placed in the warm bakery scene, "
             "preserve the waffle exactly, cozy cafe styling, grounded on the tabletop, "
@@ -53,8 +53,8 @@ JOBS = [
         "name": "drink_on_3_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_음료_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "3_bg.webp",
-        "scale": 0.46,
-        "offset_y": 0.08,
+        "scale": 0.34,
+        "offset_y": 0.12,
         "prompt": (
             "A realistic drink naturally placed in the cafe scene, preserve the drink exactly, "
             "balanced composition, subtle glass shadow, photorealistic beverage advertising."
@@ -64,8 +64,8 @@ JOBS = [
         "name": "cake_on_4_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_케이크_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "4_bg.webp",
-        "scale": 0.48,
-        "offset_y": 0.11,
+        "scale": 0.32,
+        "offset_y": 0.20,
         "prompt": (
             "A realistic slice of cake naturally placed in the cozy cafe scene, "
             "preserve the cake exactly, clean tabletop composition, soft shadow, "
@@ -124,6 +124,23 @@ def resize_background(image: Image.Image, target: int = 768) -> Image.Image:
     return image.resize(new_size, Image.Resampling.LANCZOS)
 
 
+def resolve_existing_path(path: Path) -> Path:
+    if path.exists():
+        return path
+    nested_candidate = path.parent / "exp1_rembg" / path.name
+    if nested_candidate.exists():
+        return nested_candidate
+    raise FileNotFoundError(path)
+
+
+def crop_to_bbox(image: Image.Image) -> Image.Image:
+    alpha = image.getchannel("A")
+    bbox = alpha.getbbox()
+    if bbox:
+        return image.crop(bbox)
+    return image
+
+
 def fit_object(obj: Image.Image, background_size: tuple[int, int], scale: float) -> Image.Image:
     bg_w, bg_h = background_size
     obj_w, obj_h = obj.size
@@ -138,9 +155,10 @@ def build_initial_composite(
     scale: float,
     offset_y: float,
 ) -> Image.Image:
-    background = resize_background(Image.open(background_path).convert("RGB"))
-    obj = Image.open(object_path).convert("RGBA")
-    obj = fit_object(obj, background.size, scale)
+    background = resize_background(Image.open(resolve_existing_path(background_path)).convert("RGB"))
+    obj_raw = Image.open(resolve_existing_path(object_path)).convert("RGBA")
+    obj_cropped = crop_to_bbox(obj_raw)
+    obj = fit_object(obj_cropped, background.size, scale)
 
     bg_w, bg_h = background.size
     obj_w, obj_h = obj.size
@@ -173,8 +191,9 @@ def load_pipeline() -> AutoPipelineForImage2Image:
     print(f"loading model: {model_path}")
     pipe = AutoPipelineForImage2Image.from_pretrained(model_path, **load_kwargs)
     pipe.enable_attention_slicing()
-    pipe.enable_vae_slicing()
-    pipe.enable_vae_tiling()
+    if hasattr(pipe, "vae"):
+        pipe.vae.enable_slicing()
+        pipe.vae.enable_tiling()
     if device == "cuda":
         pipe.enable_model_cpu_offload()
     else:

@@ -158,6 +158,15 @@ def resolve_base_model_path() -> str:
     return SDXL_BASE_MODEL_ID
 
 
+def resolve_existing_path(path: Path) -> Path:
+    if path.exists():
+        return path
+    nested_candidate = path.parent / "exp1_rembg" / path.name
+    if nested_candidate.exists():
+        return nested_candidate
+    raise FileNotFoundError(path)
+
+
 def alpha_bbox(alpha: Image.Image) -> tuple[int, int, int, int]:
     alpha_np = np.array(alpha)
     ys, xs = np.nonzero(alpha_np > 10)
@@ -184,7 +193,7 @@ def prepare_background(image: Image.Image, bg_scale: float, focus_x: float, focu
 
 
 def transform_object(object_path: Path, preset: dict[str, float]) -> Image.Image:
-    obj = Image.open(object_path).convert("RGBA")
+    obj = Image.open(resolve_existing_path(object_path)).convert("RGBA")
     obj, (bbox_w, bbox_h) = crop_to_bbox(obj)
 
     rotation = float(preset.get("rotation_deg", 0))
@@ -217,7 +226,7 @@ def build_initial_composite(job: dict[str, object]) -> tuple[Image.Image, Image.
     preset = LAYOUT_PRESETS[bg_name]
 
     background = prepare_background(
-        Image.open(Path(job["background"])).convert("RGB"),
+        Image.open(resolve_existing_path(Path(job["background"]))).convert("RGB"),
         float(job["bg_scale"]),
         float(job["bg_focus_x"]),
         float(job["bg_focus_y"]),
@@ -259,8 +268,9 @@ def load_pipeline() -> AutoPipelineForImage2Image:
     print(f"loading model: {model_path}")
     pipe = AutoPipelineForImage2Image.from_pretrained(model_path, **kwargs)
     pipe.enable_attention_slicing()
-    pipe.enable_vae_slicing()
-    pipe.enable_vae_tiling()
+    if hasattr(pipe, "vae"):
+        pipe.vae.enable_slicing()
+        pipe.vae.enable_tiling()
     if device == "cuda":
         pipe.enable_model_cpu_offload()
     else:

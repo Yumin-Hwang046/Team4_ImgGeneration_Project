@@ -26,6 +26,9 @@ pillow
 openai
 torch>=2.4
 torchvision>=0.19
+diffusers[torch]>=0.30.0
+accelerate>=0.33.0
+safetensors>=0.4.4
 transformers>=4.44
 optimum>=1.21
 rembg[gpu]
@@ -33,11 +36,10 @@ rembg[gpu]
 # Model Optimization (Linux only where noted)
 onnx>=1.15
 onnxruntime>=1.17
-onnxruntime-gpu; platform_system == "Linux"
+onnxruntime-gpu; platform_system == "Linux" or platform_system == "Windows"
 nvidia-tensorrt; platform_system == "Linux"
 pycuda; platform_system == "Linux"
 
 # Observability
 wandb
 langfuse
-

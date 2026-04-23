@@ -5,14 +5,19 @@ import sys
 from PIL import Image, ImageOps
 
 try:
-    from rembg import remove
+    from rembg import remove, new_session
+    import onnxruntime as ort
 except Exception:
-    print("rembg가 필요합니다. 먼저 `pip install rembg`를 실행하세요.")
+    print("필수 패키지(rembg, onnxruntime)가 누락되었습니다. 'pip install rembg onnxruntime'를 실행하세요.")
     sys.exit(1)
 
 
 def _remove_background(image: Image.Image) -> Image.Image:
-    result = remove(image)
+    # 사용 가능한 실행 프로바이더(CPU/GPU)를 감지하고 세션을 명시적으로 생성합니다.
+    providers = ort.get_available_providers()
+    session = new_session(providers=providers)
+    
+    result = remove(image, session=session)
     if isinstance(result, bytes):
         return Image.open(io.BytesIO(result)).convert("RGBA")
     return result.convert("RGBA")
@@ -32,7 +37,13 @@ def main() -> int:
     # 음식(전경)=검정, 배경=흰색으로 뒤집기
     mask = ImageOps.invert(alpha).convert("L")
     mask.save(args.output)
+
+    # 배경이 제거된 원본 객체(RGBA)도 함께 저장하여 합성 작업에 사용할 수 있도록 합니다.
+    no_bg_path = args.output.replace("_mask.png", "_no_bg.png")
+    cut.save(no_bg_path)
+
     print(f"마스크 저장 완료: {args.output}")
+    print(f"배경 제거 이미지 저장 완료: {no_bg_path}")
     return 0
 
 
