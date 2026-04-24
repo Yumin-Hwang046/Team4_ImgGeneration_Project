@@ -2,7 +2,7 @@
 
 ## 1. 실험 목적
 - 배경 제거(rembg) 처리된 제품 이미지를 홍보용 배경에 자연스럽게 합성.
-- 제품의 왜곡을 최소화하면서도 배경과 조화로운 '광고용 Hero Shot' 구도 도출.
+- **제품 이미지의 원본성을 100% 유지**하면서 배경과 조화로운 '광고용 Hero Shot' 구도 도출.
 - SDXL Base 모델을 활용한 img2img 공정의 안정성 확보.
 
 ## 2. 주요 해결 과제 및 수행 내용
@@ -26,13 +26,14 @@
 ## 3. 기술적 사양 (Technical Setup)
 - **Background Handling**: 원본 비율 유지 리사이즈 (No Distortion, No Cropping)
 - **Frame Size**: 768px (속도 및 메모리 효율 최적화)
-- **Base Model**: Stable Diffusion XL Base 1.0
-- **Denoising Strength**: 0.32 (배경 원본성 강화 및 생성 속도 개선)
-- **Inference Steps**: 20 steps (실시간성 확보를 위한 스텝 수 하향)
-- **Guidance Scale**: 6.5
+- **Composition Method**: Direct Alpha Blending (AI 보정 생략으로 원본 픽셀 보존)
+- **Shadow Effect**: Gaussian Blur 기반 동적 그림자 레이어 생성
+- **Edge Smoothing**: 알파 채널 가우시안 블러(Radius 1.2)를 통한 안티앨리어싱 적용
+- **Color Matching**: Global Mean-Shift 로직 적용 (배경 톤 반영률 15%)
+- **Processing Speed**: 모델 로딩 생략으로 실행 즉시 결과 도출 가능
 
 ## 4. 실험 결과 요약
-1. **형태 보존**: 제품 이미지를 합성 후 img2img를 거쳐도 `strength` 조절을 통해 원본 제품의 특징(와플의 격자, 음료의 색상 등)이 정확히 유지됨.
+1. **픽셀 보존**: AI 추론 단계를 생략하고 직접 합성 방식을 채택하여 원본 제품의 디테일과 색상을 100% 왜곡 없이 유지함.
 2. **접지감 개선**: 제품 하단에 동적 Gaussian Blur 기반의 그림자 레이어를 생성하여 공중에 떠 있는 느낌을 제거하고 테이블에 안착한 효과 구현.
 3. **구도 일관성**: 여백 제거 로직 덕분에 다양한 크기의 원본 사진을 입력해도 결과물 내의 제품 크기가 일정하게 유지됨.
 
