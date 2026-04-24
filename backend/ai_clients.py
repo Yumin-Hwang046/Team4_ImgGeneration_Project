@@ -1,9 +1,12 @@
 import os
+import json
+import re
 from pathlib import Path
 from typing import Dict, Optional, Any
 
 import requests
 from dotenv import load_dotenv
+from openai import OpenAI
 from observability import trace_model_call
 
 try:
@@ -79,6 +82,7 @@ GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 TEXT_GENERATOR_URL = os.getenv("TEXT_GENERATOR_URL", "").strip()
 IMAGE_GENERATOR_URL = os.getenv("IMAGE_GENERATOR_URL", "").strip()
+TEXT_MODEL_NAME = (os.getenv("TEXT_MODEL_NAME", "").strip() or "gpt-5-mini")
 
 def _safe_slug(text: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in text)[:50]
@@ -117,6 +121,34 @@ def _normalize_hashtags(raw: Any) -> list[str]:
             result.append(token)
 
     return result[:10]
+
+
+def _extract_json_object(text: str) -> Optional[dict]:
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return None
+
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    try:
+        parsed = json.loads(cleaned)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        pass
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start >= 0 and end > start:
+        snippet = cleaned[start : end + 1]
+        try:
+            parsed = json.loads(snippet)
+            return parsed if isinstance(parsed, dict) else None
+        except Exception:
+            return None
+
+    return None
 
 
 def _build_image_prompt(
@@ -175,29 +207,16 @@ def _fallback_text_result(
     extra_prompt: Optional[str] = None,
     error: Optional[str] = None,
 ) -> Dict:
+    display_name = _clean_text(menu_name) or "이곳"
+
     if purpose == "방문 유도":
-        copy = f"{location}에서 {menu_name} 찾고 있었다면 지금이 딱 좋아요."
+        copy = f"{location}에서 {display_name}를 찾고 있었다면 지금이 딱 좋아요."
     elif purpose == "신메뉴 홍보":
-        copy = f"{menu_name}, 이번에 새롭게 준비했어요."
+        copy = f"{display_name}, 이번에 새롭게 준비했어요."
     elif purpose == "이벤트 홍보":
-        copy = f"{menu_name}와 함께 지금 분위기 좋게 즐겨보세요."
+        copy = f"{display_name}와 함께 지금 분위기 좋게 즐겨보세요."
     else:
-        copy = f"{menu_name}의 매력을 지금 경험해보세요."
-
-    details = []
-    if weather_summary and "날씨 조회 실패" not in weather_summary:
-        details.append(weather_summary)
-    if season_context:
-        details.append(season_context)
-    if mood:
-        details.append(f"무드: {mood}")
-    if recommended_concept:
-        details.append(f"컨셉: {recommended_concept}")
-    if extra_prompt:
-        details.append(f"추가요청: {extra_prompt}")
-
-    if details:
-        copy = f"{copy} ({' / '.join(details)})"
+        copy = f"{display_name}의 매력을 지금 경험해보세요."
 
     hashtags = _normalize_hashtags([
         business_category,
@@ -355,65 +374,96 @@ def _call_local_text_generator(
     extra_prompt: Optional[str] = None,
 ) -> Dict:
     try:
-        from text_generator.generator import generate_marketing_copy
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        if not api_key:
+            return {"success": False, "copy": "", "hashtags": [], "error": "OPENAI_API_KEY not configured"}
+        client = OpenAI(api_key=api_key)
 
         trace_model_call(
-            name="text_generator.local_model",
-            provider="local",
-            model="text_generator.generator.generate_marketing_copy",
+            name="text_generator.openai",
+            provider="openai",
+            model=TEXT_MODEL_NAME,
             input={
                 "purpose": purpose,
                 "business_category": business_category,
                 "menu_name": menu_name,
                 "location": location,
                 "mood": mood,
+                "weather_summary": weather_summary,
+                "season_context": season_context,
+                "recommended_concept": recommended_concept,
+                "extra_prompt": extra_prompt,
             },
-            metadata={"mode": "local"},
+            metadata={"mode": "openai"},
             tags=["model", "text-generator"],
         )
-        result = generate_marketing_copy(
-            purpose=purpose,
-            business_category=business_category,
-            menu_name=menu_name,
-            location=location,
-            mood=mood,
-            weather_summary=weather_summary,
-            season_context=season_context,
-            recommended_concept=recommended_concept,
-            extra_prompt=extra_prompt,
+        prompt = (
+            "너는 상권/브랜드 마케팅 문구 작성기다. "
+            "반드시 JSON만 출력한다. "
+            '형식은 {"copy":"문구","hashtags":["태그1","태그2"]} 이다. '
+            "copy는 한국어로 자연스럽고 짧게 1문장으로 작성한다. "
+            "hashtags는 최대 10개, # 없이 순수 단어 배열로 작성한다. "
+            "아래 정보를 반영한다.\n"
+            f"- 목적: {purpose}\n"
+            f"- 업종: {business_category}\n"
+            f"- 메뉴/대상: {menu_name or '이곳'}\n"
+            f"- 지역: {location}\n"
+            f"- 무드: {mood or ''}\n"
+            f"- 날씨: {weather_summary}\n"
+            f"- 시즌 맥락: {season_context}\n"
+            f"- 추천 컨셉: {recommended_concept}\n"
+            f"- 추가 요청: {extra_prompt or ''}\n"
+            "문구에는 괄호 설명을 붙이지 말고, 해시태그는 문구와 중복되더라도 자연스럽게 선택한다."
         )
 
-        if not isinstance(result, dict):
-            return {"success": False, "copy": "", "hashtags": [], "error": "non-dict result"}
+        response = client.responses.create(
+            model=TEXT_MODEL_NAME,
+            input=prompt,
+            max_output_tokens=500,
+        )
+        output_text = getattr(response, "output_text", "") or ""
+        parsed = _extract_json_object(output_text)
+        if not parsed:
+            return {
+                "success": False,
+                "copy": "",
+                "hashtags": [],
+                "error": f"invalid json output: {output_text[:500]}",
+            }
+
+        copy = _clean_text(parsed.get("copy"))
+        hashtags = _normalize_hashtags(parsed.get("hashtags", []))
+        if not copy:
+            return {"success": False, "copy": "", "hashtags": [], "error": "empty copy from openai"}
 
         trace_model_call(
-            name="text_generator.local_model",
-            provider="local",
-            model="text_generator.generator.generate_marketing_copy",
+            name="text_generator.openai",
+            provider="openai",
+            model=TEXT_MODEL_NAME,
             input={"menu_name": menu_name, "purpose": purpose},
             output={
-                "success": bool(result.get("copy")),
-                "copy_preview": _clean_text(result.get("copy"))[:300],
-                "hashtags": _normalize_hashtags(result.get("hashtags", [])),
+                "success": True,
+                "copy_preview": copy[:300],
+                "hashtags": hashtags,
             },
-            metadata={"mode": "local"},
+            metadata={"mode": "openai"},
             tags=["model", "text-generator"],
         )
         return {
-            "success": bool(result.get("copy")),
-            "copy": _clean_text(result.get("copy")),
-            "hashtags": _normalize_hashtags(result.get("hashtags", [])),
-            "error": result.get("error"),
+            "success": True,
+            "copy": copy,
+            "hashtags": hashtags,
+            "error": None,
         }
 
     except Exception as e:
         trace_model_call(
-            name="text_generator.local_model",
-            provider="local",
-            model="text_generator.generator.generate_marketing_copy",
+            name="text_generator.openai",
+            provider="openai",
+            model=TEXT_MODEL_NAME,
             input={"menu_name": menu_name, "purpose": purpose},
             error=str(e),
-            metadata={"mode": "local"},
+            metadata={"mode": "openai"},
             tags=["model", "text-generator"],
         )
         return {"success": False, "copy": "", "hashtags": [], "error": str(e)}
