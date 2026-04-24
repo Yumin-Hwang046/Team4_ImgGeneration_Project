@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from observability import build_langfuse_media_list, log_langfuse_trace
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "generated" / "merged" / "exp18"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "generated" / "merged" / "exp23"
 SDXL_BASE_MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
 SDXL_BASE_CACHE_ROOT = (
     Path.home()
@@ -23,17 +23,20 @@ SDXL_BASE_CACHE_ROOT = (
 )
 FRAME_SIZE = 768
 
+# 배경별 최적 구도 프리셋 (자동 계산용)
+# anchor_y는 물체의 '하단'이 위치할 지점을 의미합니다 (접지감 극대화).
+LAYOUT_PRESETS = {
+    "1_dish_bg": {"object_scale": 0.48, "anchor_x": 0.50, "anchor_y": 0.51, "scale_by": "width"},
+    "2_dish_bg": {"object_scale": 0.62, "anchor_x": 0.50, "anchor_y": 0.75, "scale_by": "width"},
+    "4_bg":      {"object_scale": 0.60, "anchor_x": 0.50, "anchor_y": 0.58, "scale_by": "max"},
+    "3_bg":      {"object_scale": 0.55, "anchor_x": 0.58, "anchor_y": 0.98, "scale_by": "max"},
+}
+
 JOBS = [
     {
         "name": "waffle_on_1_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_와플_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "1_dish_bg.png",
-        "object_scale": 0.48,
-        "anchor_x": 0.50,
-        "anchor_y": 0.51,
-        "bg_scale": 1.0,
-        "bg_focus_x": 0.50,
-        "bg_focus_y": 0.50,
         "prompt": (
             "A realistic waffle dessert hero shot centered in frame, preserve the waffle exactly, "
             "strong composition, balanced negative space, grounded on the table plane, "
@@ -44,12 +47,6 @@ JOBS = [
         "name": "waffle_on_2_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_와플_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "2_dish_bg.png",
-        "object_scale": 0.62,
-        "anchor_x": 0.50,
-        "anchor_y": 0.75,
-        "bg_scale": 1.0,
-        "bg_focus_x": 0.50,
-        "bg_focus_y": 0.50,
         "prompt": (
             "A realistic waffle dessert filling the lower center of the frame, preserve the waffle exactly, "
             "tight commercial composition, rich bakery mood, realistic tabletop contact, "
@@ -60,12 +57,6 @@ JOBS = [
         "name": "drink_on_3_bg",
         "object": PROJECT_ROOT / "generated" / "removed_bg" / "exp1_rembg" / "input_음료_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "4_bg.webp",
-        "object_scale": 0.60,
-        "anchor_x": 0.50,
-        "anchor_y": 0.58,
-        "bg_scale": 1.0,
-        "bg_focus_x": 0.50,
-        "bg_focus_y": 0.50,
         "prompt": (
             "A realistic drink hero shot centered in frame, preserve the drink exactly, "
             "clean cafe composition, realistic shadow and table grounding, "
@@ -73,15 +64,19 @@ JOBS = [
         ),
     },
     {
-        "name": "cake_on_4_bg",
-        "object": PROJECT_ROOT / "test" / "mask" / "input_케이크2_no_bg.png",
+        "name": "pudding_on_4_bg",
+        "object": PROJECT_ROOT / "test" / "mask" / "input_푸딩_no_bg.png",
         "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "3_bg.webp",
-        "object_scale": 0.55,
-        "anchor_x": 0.58,
-        "anchor_y": 0.98,
-        "bg_scale": 1.0,
-        "bg_focus_x": 0.50,
-        "bg_focus_y": 0.50,
+        "prompt": (
+            "A realistic cake placed in the lower right of the frame, preserve the cake exactly, "
+            "intentional asymmetrical composition, grounded on the tabletop plane, "
+            "soft directional shadow, premium dessert photography, photorealistic."
+        ),
+    },
+    {
+        "name": "cake_on_4_bg",
+        "object": PROJECT_ROOT / "test" / "mask" / "input_케이크4_no_bg.png",
+        "background": PROJECT_ROOT / "assets" / "presets" / "warm" / "3_bg.webp",
         "prompt": (
             "A realistic cake placed in the lower right of the frame, preserve the cake exactly, "
             "intentional asymmetrical composition, grounded on the tabletop plane, "
@@ -140,9 +135,13 @@ def crop_to_bbox(image: Image.Image) -> Image.Image:
     return image
 
 
-def fit_object(obj: Image.Image, frame_size: int, object_scale: float) -> Image.Image:
+def fit_object(obj: Image.Image, frame_size: int, object_scale: float, scale_by: str = "max") -> Image.Image:
     ow, oh = obj.size
-    ratio = min((frame_size * object_scale) / ow, (frame_size * object_scale) / oh)
+    if scale_by == "width":
+        ratio = (frame_size * object_scale) / ow
+    else:
+        # 기본값 'max': 물체의 긴 축을 기준으로 스케일 조정
+        ratio = min((frame_size * object_scale) / ow, (frame_size * object_scale) / oh)
     return obj.resize((max(1, int(ow * ratio)), max(1, int(oh * ratio))), Image.Resampling.LANCZOS)
 
 
@@ -160,19 +159,24 @@ def apply_color_match(obj: Image.Image, bg: Image.Image, strength: float = 0.15)
 
 def build_initial_composite(job: dict[str, object]) -> Image.Image:
     bg_path = resolve_existing_path(Path(job["background"]))
+    preset = LAYOUT_PRESETS.get(bg_path.stem, {"object_scale": 0.5, "anchor_x": 0.5, "anchor_y": 0.5, "scale_by": "max"})
+    
     bg_img = Image.open(bg_path).convert("RGB")
     
     bg = prepare_background(
         bg_img,
-        float(job["bg_scale"]),
-        float(job["bg_focus_x"]),
-        float(job["bg_focus_y"]),
+        float(job.get("bg_scale", 1.0)),
+        float(job.get("bg_focus_x", 0.5)),
+        float(job.get("bg_focus_y", 0.5)),
     )
     obj_raw = Image.open(resolve_existing_path(Path(job["object"]))).convert("RGBA")
+    
+    scale = float(job.get("object_scale", preset["object_scale"]))
     obj = fit_object(
         crop_to_bbox(obj_raw),
         FRAME_SIZE,
-        float(job["object_scale"]),
+        scale,
+        scale_by=preset.get("scale_by", "max")
     )
 
     # Color Matching: 제품의 색감을 배경의 전반적인 톤에 맞춤 (strength=0.15는 원본을 크게 해치지 않는 수준)
@@ -185,27 +189,15 @@ def build_initial_composite(job: dict[str, object]) -> Image.Image:
     frame = bg.convert("RGBA")
     fw, fh = frame.size
     ow, oh = obj.size
+    
+    ax = float(job.get("anchor_x", preset["anchor_x"]))
+    ay = float(job.get("anchor_y", preset["anchor_y"]))
 
-    # Calculate desired reference point on the frame based on anchor_x, anchor_y
-    # anchor_x: horizontal center of the object aligns with fw * anchor_x
-    # anchor_y: vertical alignment point on the frame.
-    #           If anchor_y >= 0.9, object's bottom aligns with fh * anchor_y.
-    #           Otherwise, object's center aligns with fh * anchor_y.
-    target_x_on_frame = int(fw * float(job["anchor_x"]))
-    target_y_on_frame = int(fh * float(job["anchor_y"]))
+    cx = int(fw * ax)
+    cy = int(fh * ay)
 
-    # Calculate object's top-left x coordinate
-    x = target_x_on_frame - ow // 2
-
-    # Calculate object's top-left y coordinate
-    if float(job["anchor_y"]) >= 0.9:
-        y = target_y_on_frame - oh # Align bottom of object
-    else:
-        y = target_y_on_frame - oh // 2 # Align center of object
-
-    # Clamp x and y to ensure the object stays within the frame boundaries
-    x = max(0, min(fw - ow, x))
-    y = max(0, min(fh - oh, y))
+    x = max(0, min(fw - ow, cx - ow // 2))
+    y = max(0, min(fh - oh, cy - oh // 2)) # 중앙 정렬 기준 복구
 
     alpha = obj.getchannel("A")
     shadow = alpha.filter(ImageFilter.GaussianBlur(radius=max(18, oh // 18)))
