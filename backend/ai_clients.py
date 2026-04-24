@@ -1,11 +1,10 @@
 import os
-import subprocess
 from pathlib import Path
 from typing import Dict, Optional, Any
 
 import requests
 from dotenv import load_dotenv
-from observability import trace_model_call, trace_subprocess_call
+from observability import trace_model_call
 
 try:
     import wandb
@@ -66,16 +65,6 @@ def _wandb_log_safe(payload: dict) -> None:
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(os.getenv("MODEL_PROJECT_ROOT", str(BASE_DIR.parent)))
-IMAGE_PIPELINE_SCRIPT = Path(
-    os.getenv(
-        "IMAGE_PIPELINE_SCRIPT",
-        str(PROJECT_ROOT / "backend" / "image_generator" / "run_pipeline.py"),
-    )
-)
-MODEL_VENV_PYTHON = os.getenv(
-    "MODEL_VENV_PYTHON",
-    str(PROJECT_ROOT / ".venv" / "bin" / "python"),
-)
 REFERENCE_PRESET_DIR = Path(
     os.getenv(
         "REFERENCE_PRESET_DIR",
@@ -151,38 +140,27 @@ def _build_image_prompt(
     return " | ".join(parts)
 
 
-def _find_output_image(output_dir: Path) -> Optional[Path]:
-    if not output_dir.exists():
-        return None
-
-    candidates = []
-    for ext in ("*.png", "*.jpg", "*.jpeg", "*.webp"):
-        candidates.extend(output_dir.glob(ext))
-
-    if not candidates:
-        return None
-
-    return sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)[0]
-
-
 def _resolve_reference_preset_path(mood: Optional[str]) -> Path:
     mood_key = _clean_text(mood).lower()
-    preset_map = {
-        "warm": "warm.png",
-        "clean": "clean.png",
-        "trendy": "trendy.png",
-        "premium": "premium.png",
-        "따뜻한": "warm.png",
-        "깔끔한": "clean.png",
-        "트렌디": "trendy.png",
-        "프리미엄": "premium.png",
+    preset_number_map = {
+        "warm": "1",
+        "따뜻한": "1",
+        "clean": "2",
+        "깔끔한": "2",
+        "trendy": "3",
+        "트렌디": "3",
+        "premium": "4",
+        "프리미엄": "4",
     }
-    filename = preset_map.get(mood_key, "default.png")
-    candidate = REFERENCE_PRESET_DIR / filename
+    preferred_number = preset_number_map.get(mood_key, "1")
 
-    if candidate.exists():
-        return candidate
-    return REFERENCE_PRESET_DIR / "default.png"
+    for number in (preferred_number, "1", "2", "3", "4"):
+        candidates = sorted(path for path in REFERENCE_PRESET_DIR.glob(f"{number}*") if path.is_file())
+        if candidates:
+            return candidates[0]
+
+    default_candidate = REFERENCE_PRESET_DIR / "default.png"
+    return default_candidate
 
 
 def _fallback_text_result(
@@ -270,18 +248,6 @@ def _call_remote_image_generator(prompt: str, run_name: str) -> Optional[Dict]:
         return {"success": False, "error": str(e)}
 
 
-def _build_subprocess_error(cmd: list[str], result: subprocess.CompletedProcess[str]) -> str:
-    stderr = (result.stderr or "").strip()
-    stdout = (result.stdout or "").strip()
-    parts = [f"Image pipeline exited with code {result.returncode}."]
-    if stderr:
-        parts.append(f"stderr: {stderr}")
-    if stdout:
-        parts.append(f"stdout: {stdout}")
-    parts.append(f"cmd: {' '.join(cmd)}")
-    return " ".join(parts)
-
-
 def call_image_generator(
     business_category: str,
     menu_name: str,
@@ -310,71 +276,57 @@ def call_image_generator(
         )
 
         run_name = f"{_safe_slug(menu_name)}_{_safe_slug(business_category)}"
+        exp16_error_message = None
+
+        if image_path:
+            try:
+                from image_generator.exp16_gpt_image_mini import generate_image_exp16_api
+
+                exp16_result = generate_image_exp16_api(
+                    user_image_path=str(image_path),
+                    reference_image_path=str(_resolve_reference_preset_path(mood)),
+                    user_prompt=prompt,
+                    format_type="피드",
+                    output_subdir=run_name,
+                )
+                _wandb_log_safe({
+                    "trace_stage": "call_image_generator_exp16_success",
+                    "menu_name": menu_name,
+                    "model": "gpt-image-1-mini",
+                })
+                return {
+                    "success": True,
+                    "image_url": exp16_result["path"],
+                    "prompt_used": prompt,
+                    "error": None,
+                }
+            except Exception as exp16_error:
+                exp16_error_message = str(exp16_error)
+                _wandb_log_safe({
+                    "trace_stage": "call_image_generator_exp16_fallback",
+                    "menu_name": menu_name,
+                    "error": exp16_error_message,
+                })
 
         remote = _call_remote_image_generator(prompt, run_name)
-        remote_error = None
         if remote:
             if remote.get("success"):
                 return remote
-            remote_error = remote.get("error")
-
-        output_dir = GENERATED_DIR / run_name
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        if not IMAGE_PIPELINE_SCRIPT.exists():
             return {
                 "success": False,
                 "image_url": None,
                 "prompt_used": prompt,
-                "error": (
-                    f"Image pipeline script not found: {IMAGE_PIPELINE_SCRIPT}"
-                    + (f" | remote_error={remote_error}" if remote_error else "")
-                ),
+                "error": remote.get("error"),
             }
-
-        cmd = [
-            MODEL_VENV_PYTHON,
-            str(IMAGE_PIPELINE_SCRIPT),
-            "--prompt", prompt,
-            "--output_dir", str(output_dir),
-            "--reference_image_path", str(_resolve_reference_preset_path(mood)),
-        ]
-
-        if image_path:
-            cmd.extend(["--image_path", str(image_path)])
-
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        trace_subprocess_call(
-            name="image_generator.local_pipeline",
-            cmd=cmd,
-            returncode=result.returncode,
-            stdout=result.stdout,
-            stderr=result.stderr,
-            metadata={"run_name": run_name},
-            tags=["subprocess", "image-generator"],
-        )
-
-        if result.returncode == 0:
-            output_image = _find_output_image(output_dir)
-            if output_image is not None:
-                _wandb_log_safe({
-                    "trace_stage": "call_image_generator_success",
-                    "menu_name": menu_name,
-                    "used_dummy": False,
-                })
-                return {
-                    "success": True,
-                    "image_url": str(output_image),
-                    "prompt_used": prompt,
-                    "error": None,
-                }
 
         return {
             "success": False,
             "image_url": None,
             "prompt_used": prompt,
-            "error": _build_subprocess_error(cmd, result)
-            + (f" | remote_error={remote_error}" if remote_error else ""),
+            "error": (
+                "GPT-image 경로 실패 후 사용할 로컬 SDXL fallback은 제거되었습니다."
+                + (f" | exp16_error={exp16_error_message}" if exp16_error_message else "")
+            ),
         }
 
     except Exception as e:

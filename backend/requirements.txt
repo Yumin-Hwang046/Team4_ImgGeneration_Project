@@ -11,5 +11,6 @@ apscheduler
 pydantic[email]
 pillow
 openai
+rembg
 wandb
 langfuse
