@@ -90,10 +90,6 @@ GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 TEXT_GENERATOR_URL = os.getenv("TEXT_GENERATOR_URL", "").strip()
 IMAGE_GENERATOR_URL = os.getenv("IMAGE_GENERATOR_URL", "").strip()
 
-# 모델 미연결 시 사용할 더미 이미지 (직접 서빙 JPEG)
-DUMMY_IMAGE_URL = "https://dummyimage.com/1080x1080/6BA4B8/FFFFFF.jpg"
-
-
 def _safe_slug(text: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in text)[:50]
 
@@ -273,6 +269,18 @@ def _call_remote_image_generator(prompt: str, run_name: str) -> Optional[Dict]:
         return {"success": False, "error": str(e)}
 
 
+def _build_subprocess_error(cmd: list[str], result: subprocess.CompletedProcess[str]) -> str:
+    stderr = (result.stderr or "").strip()
+    stdout = (result.stdout or "").strip()
+    parts = [f"Image pipeline exited with code {result.returncode}."]
+    if stderr:
+        parts.append(f"stderr: {stderr}")
+    if stdout:
+        parts.append(f"stdout: {stdout}")
+    parts.append(f"cmd: {' '.join(cmd)}")
+    return " ".join(parts)
+
+
 def call_image_generator(
     business_category: str,
     menu_name: str,
@@ -303,11 +311,25 @@ def call_image_generator(
         run_name = f"{_safe_slug(menu_name)}_{_safe_slug(business_category)}"
 
         remote = _call_remote_image_generator(prompt, run_name)
-        if remote and remote.get("success"):
-            return remote
+        remote_error = None
+        if remote:
+            if remote.get("success"):
+                return remote
+            remote_error = remote.get("error")
 
         output_dir = GENERATED_DIR / run_name
         output_dir.mkdir(parents=True, exist_ok=True)
+
+        if not IMAGE_PIPELINE_SCRIPT.exists():
+            return {
+                "success": False,
+                "image_url": None,
+                "prompt_used": prompt,
+                "error": (
+                    f"Image pipeline script not found: {IMAGE_PIPELINE_SCRIPT}"
+                    + (f" | remote_error={remote_error}" if remote_error else "")
+                ),
+            }
 
         cmd = [
             MODEL_VENV_PYTHON,
@@ -337,16 +359,12 @@ def call_image_generator(
                     "error": None,
                 }
 
-        _wandb_log_safe({
-            "trace_stage": "call_image_generator_dummy_fallback",
-            "menu_name": menu_name,
-            "used_dummy": True,
-        })
         return {
-            "success": True,
-            "image_url": DUMMY_IMAGE_URL,
+            "success": False,
+            "image_url": None,
             "prompt_used": prompt,
-            "error": None,
+            "error": _build_subprocess_error(cmd, result)
+            + (f" | remote_error={remote_error}" if remote_error else ""),
         }
 
     except Exception as e:
@@ -356,10 +374,10 @@ def call_image_generator(
             "error": str(e),
         })
         return {
-            "success": True,
-            "image_url": DUMMY_IMAGE_URL,
-            "prompt_used": recommended_concept,
-            "error": None,
+            "success": False,
+            "image_url": None,
+            "prompt_used": prompt if 'prompt' in locals() else recommended_concept,
+            "error": str(e),
         }
 
 

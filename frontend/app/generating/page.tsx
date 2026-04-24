@@ -15,6 +15,15 @@ function resolveImageUrl(url: string | null | undefined): string | null {
   if (url.startsWith('/media/')) return `${BACKEND_ORIGIN}${url}`
   return null
 }
+
+function extractFailureMessage(data: GenerationDetailResponse): string {
+  const extra = data.extra_info ?? ''
+  const detailMatch = extra.match(/\[DETAIL\]\s*([^\n]+)/)
+  if (detailMatch?.[1]) return detailMatch[1]
+  const errorMatch = extra.match(/\[ERROR\]\s*([^\n]+)/)
+  if (errorMatch?.[1]) return errorMatch[1]
+  return '콘텐츠 생성에 실패했습니다. 다시 시도해주세요.'
+}
 // ─── Schedule Modal ────────────────────────────────────────────────────────────
 
 type Channel = 'instagram_feed' | 'instagram_story'
@@ -485,8 +494,9 @@ function GeneratingContent() {
         }
 
         if (st === 'FAILED') {
+          setGenData(data)
           setGenStatus('FAILED')
-          setErrorMsg('콘텐츠 생성에 실패했습니다. 다시 시도해주세요.')
+          setErrorMsg(extractFailureMessage(data))
           return
         }
 

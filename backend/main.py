@@ -27,13 +27,22 @@ from auth import router as auth_router
 from generations import router as generations_router
 from calendar_router import router as calendar_router
 from instagram_router import router as instagram_router
+from observability import report_observability_status
 from scheduler import create_scheduler
-
-Base.metadata.create_all(bind=engine)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.db_ready = False
+    app.state.db_error = None
+
+    try:
+        Base.metadata.create_all(bind=engine)
+        app.state.db_ready = True
+    except Exception as e:
+        app.state.db_error = str(e)
+        print(f"[main] database initialization failed: {e}")
+
+    report_observability_status()
     scheduler = create_scheduler()
     scheduler.start()
     yield
@@ -108,5 +117,8 @@ except ImportError as e:
 
 @app.get("/")
 def root():
-    return {"message": "Backend is running"}
-
+    return {
+        "message": "Backend is running",
+        "db_ready": getattr(app.state, "db_ready", False),
+        "db_error": getattr(app.state, "db_error", None),
+    }

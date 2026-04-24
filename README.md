@@ -138,10 +138,12 @@ uv venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 
 # 패키지 설치
+# 기본 requirements.txt 는 Python 3.10에서 바로 설치되도록 일반 torch 버전을 사용합니다.
 uv pip install -r requirements.txt
 
-# NVIDIA GPU 환경이라면 CUDA 버전 torch 설치 (선택)
-# uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+# NVIDIA GPU 환경이라면 PyTorch 전용 인덱스에서 CUDA 빌드로 다시 맞춥니다. (선택)
+# `triton` 과 CUDA 런타임 패키지는 torch가 호환 버전으로 함께 가져오도록 별도 고정하지 않습니다.
+# uv pip install torch==2.6.0+cu124 torchvision==0.21.0+cu124 torchaudio==2.6.0+cu124 --index-url https://download.pytorch.org/whl/cu124
 
 # DB 테이블 생성 (최초 1회)
 python -c "from db import Base, engine; from models import *; Base.metadata.create_all(engine)"

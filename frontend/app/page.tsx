@@ -3,9 +3,9 @@ import InstagramConnect from '@/components/InstagramConnect'
 
 export default function LandingPage() {
   return (
-    <div className="bg-background text-on-background h-screen flex flex-col overflow-hidden">
+    <div className="bg-background text-on-background min-h-screen flex flex-col">
       {/* TopNavBar */}
-      <nav className="sticky top-0 w-full z-50 bg-surface-container-low border-b border-outline-variant/20 shadow-sm">
+      <nav className="sticky top-0 w-full z-50 shrink-0 bg-surface-container-low border-b border-outline-variant/20 shadow-sm">
         <div className="flex justify-between items-center px-12 py-6 max-w-[1440px] mx-auto">
           <div className="text-2xl font-bold text-on-surface tracking-tighter font-headline">
             The Digital Curator
@@ -34,7 +34,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <main className="flex-grow flex items-center max-w-[1440px] mx-auto px-12 gap-16 overflow-hidden">
+      <main className="flex-grow flex items-center max-w-[1440px] mx-auto px-12 gap-16">
         {/* Left */}
         <div className="w-full md:w-1/2 flex flex-col items-start gap-10 py-12">
           <div className="space-y-4">
@@ -148,7 +148,7 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full bg-surface-container-low">
+      <footer className="w-full shrink-0 bg-surface-container-low">
         <div className="py-8 px-12 flex flex-col md:flex-row justify-between items-center max-w-[1440px] mx-auto text-sm tracking-wide">
           <div className="flex items-center gap-8">
             <div className="text-lg font-bold text-on-surface font-headline">The Digital Curator</div>

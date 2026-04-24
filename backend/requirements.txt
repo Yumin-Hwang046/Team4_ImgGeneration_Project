@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+python-multipart
+sqlalchemy
+pymysql
+passlib[bcrypt]
+python-jose[cryptography]
+requests
+apscheduler
+pydantic[email]
+pillow
+openai
+wandb
+langfuse

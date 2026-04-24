@@ -351,6 +351,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+관측 연동 확인:
+
+```bash
+python -m observability
+```
+
 ---
 
 ## 4. DB 생성
@@ -426,4 +432,3 @@ http://localhost:8000/docs
 👉 **외부 API만 연결하면 바로 서비스 가능한 상태**
 
 ---
-
