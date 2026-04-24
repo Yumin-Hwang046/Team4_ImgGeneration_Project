@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { traceFrontendApiCall } from '@/lib/langfuse'
 
 interface StoreRecord {
   indsMclsNm?: string
@@ -341,7 +342,8 @@ JSON 형식으로만 응답하세요:
 }`
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const url = 'https://api.openai.com/v1/chat/completions'
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -353,6 +355,21 @@ JSON 형식으로만 응답하세요:
         max_completion_tokens: 2000,
       }),
       cache: 'no-store',
+    })
+    await traceFrontendApiCall({
+      name: 'frontend.commercial.openai_strategy',
+      method: 'POST',
+      url,
+      request: {
+        model: 'gpt-5-mini',
+        category: input.category,
+        fallbackDemo: input.fallbackDemo,
+        hasDemographics: Boolean(input.demographics),
+        hasNearby: Boolean(input.nearby),
+        hasStoreTop3: Boolean(input.storeTop3?.length),
+      },
+      response: { status: res.status, ok: res.ok, url: res.url, text: await res.clone().text() },
+      tags: ['frontend', 'commercial', 'openai'],
     })
     if (!res.ok) return null
     const data = await res.json()
@@ -376,6 +393,20 @@ JSON 형식으로만 응답하세요:
       keyInsight: parsed.keyInsight ?? null,
     }
   } catch (e) {
+    await traceFrontendApiCall({
+      name: 'frontend.commercial.openai_strategy',
+      method: 'POST',
+      url: 'https://api.openai.com/v1/chat/completions',
+      request: {
+        category: input.category,
+        fallbackDemo: input.fallbackDemo,
+        hasDemographics: Boolean(input.demographics),
+        hasNearby: Boolean(input.nearby),
+        hasStoreTop3: Boolean(input.storeTop3?.length),
+      },
+      error: e instanceof Error ? e.message : String(e),
+      tags: ['frontend', 'commercial', 'openai'],
+    })
     console.error('[commercial] OpenAI error:', e)
     return null
   }

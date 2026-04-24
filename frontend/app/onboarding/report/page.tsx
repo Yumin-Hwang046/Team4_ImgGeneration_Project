@@ -82,9 +82,11 @@ const RANK_COLORS = ['bg-white', 'bg-white/60', 'bg-white/30']
 export default function ReportPage() {
   const [data, setData] = useState<CommercialData | null>(null)
   const [loading, setLoading] = useState(true)
-  const location = getStoredLocation()
+  const [location, setLocation] = useState('')
 
   useEffect(() => {
+    setLocation(getStoredLocation())
+
     const admCd    = getStoredAdmCd()
     const dong     = getStoredDongName()
     const lat      = getStoredLat()

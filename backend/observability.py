@@ -154,6 +154,50 @@ def build_langfuse_media_list(paths: list[str]) -> list[dict[str, Any]]:
     return items
 
 
+def _truncate_text(value: Any, limit: int = 1000) -> Any:
+    if not isinstance(value, str):
+        return value
+    if len(value) <= limit:
+        return value
+    return value[:limit] + "...(truncated)"
+
+
+def _sanitize_for_trace(value: Any) -> Any:
+    sensitive_tokens = [
+        "authorization",
+        "access_token",
+        "token",
+        "api_key",
+        "apikey",
+        "secret",
+        "password",
+        "cookie",
+        "servicekey",
+        "client_secret",
+    ]
+
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for key, item in value.items():
+            lower_key = str(key).lower()
+            if any(token in lower_key for token in sensitive_tokens):
+                sanitized[str(key)] = "***"
+            else:
+                sanitized[str(key)] = _sanitize_for_trace(item)
+        return sanitized
+
+    if isinstance(value, (list, tuple, set)):
+        return [_sanitize_for_trace(item) for item in value]
+
+    if isinstance(value, bytes):
+        return f"<bytes:{len(value)}>"
+
+    if isinstance(value, Path):
+        return str(value)
+
+    return _truncate_text(value)
+
+
 def log_langfuse_trace(
     name: str,
     input: dict[str, Any],
@@ -165,15 +209,115 @@ def log_langfuse_trace(
     if not lf:
         return
     try:
-        lf.trace(
+        final_metadata = dict(metadata or {})
+        if tags:
+            final_metadata["tags"] = tags
+
+        lf.create_event(
             name=name,
             input=input,
             output=output,
-            metadata=metadata,
-            tags=tags,
+            metadata=final_metadata or None,
         )
     except Exception as exc:
         print(f"[observability] Langfuse trace failed: {type(exc).__name__}: {exc}")
+
+
+def trace_http_call(
+    *,
+    name: str,
+    method: str,
+    url: str,
+    request: Optional[dict[str, Any]] = None,
+    response: Optional[Any] = None,
+    error: Optional[str] = None,
+    metadata: Optional[dict[str, Any]] = None,
+    tags: Optional[list[str]] = None,
+) -> None:
+    output: dict[str, Any] = {}
+    if response is not None:
+        output = {
+            "status_code": getattr(response, "status_code", None),
+            "ok": getattr(response, "ok", None),
+            "url": getattr(response, "url", None),
+            "text_preview": _truncate_text(getattr(response, "text", ""), 800),
+        }
+
+    if error:
+        output["error"] = error
+
+    log_langfuse_trace(
+        name=name,
+        input={
+            "type": "http",
+            "method": method,
+            "url": url,
+            "request": _sanitize_for_trace(request or {}),
+        },
+        output=_sanitize_for_trace(output),
+        metadata=_sanitize_for_trace(metadata or {}),
+        tags=tags or ["http"],
+    )
+
+
+def trace_model_call(
+    *,
+    name: str,
+    provider: str,
+    model: str,
+    input: Optional[dict[str, Any]] = None,
+    output: Optional[dict[str, Any]] = None,
+    error: Optional[str] = None,
+    metadata: Optional[dict[str, Any]] = None,
+    tags: Optional[list[str]] = None,
+) -> None:
+    final_output = dict(output or {})
+    if error:
+        final_output["error"] = error
+
+    log_langfuse_trace(
+        name=name,
+        input={
+            "type": "model",
+            "provider": provider,
+            "model": model,
+            "input": _sanitize_for_trace(input or {}),
+        },
+        output=_sanitize_for_trace(final_output),
+        metadata=_sanitize_for_trace(metadata or {}),
+        tags=tags or ["model"],
+    )
+
+
+def trace_subprocess_call(
+    *,
+    name: str,
+    cmd: list[str],
+    returncode: Optional[int] = None,
+    stdout: Optional[str] = None,
+    stderr: Optional[str] = None,
+    error: Optional[str] = None,
+    metadata: Optional[dict[str, Any]] = None,
+    tags: Optional[list[str]] = None,
+) -> None:
+    output = {
+        "returncode": returncode,
+        "stdout": _truncate_text(stdout or "", 1000),
+        "stderr": _truncate_text(stderr or "", 1000),
+    }
+    if error:
+        output["error"] = error
+
+    log_langfuse_trace(
+        name=name,
+        input={
+            "type": "subprocess",
+            "cmd": _sanitize_for_trace(cmd),
+        },
+        output=_sanitize_for_trace(output),
+        metadata=_sanitize_for_trace(metadata or {}),
+        tags=tags or ["subprocess"],
+    )
 
 
 def report_observability_status() -> dict[str, bool]:

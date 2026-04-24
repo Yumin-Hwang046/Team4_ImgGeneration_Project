@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { traceFrontendApiCall } from '@/lib/langfuse'
 
 interface WeatherInfo {
   condition: string
@@ -73,7 +74,8 @@ ${holidayText}
 팁:`
 
   try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const url = 'https://api.openai.com/v1/chat/completions'
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -89,6 +91,14 @@ ${holidayText}
       }),
       cache: 'no-store',
     })
+    await traceFrontendApiCall({
+      name: 'frontend.calendar_tip.openai',
+      method: 'POST',
+      url,
+      request: { model: 'gpt-5-mini', weather, festivals, category, currentHour, holidays_count: holidays.length },
+      response: { status: res.status, ok: res.ok, url: res.url, text: await res.clone().text() },
+      tags: ['frontend', 'calendar-tip', 'openai'],
+    })
 
     if (!res.ok) return NextResponse.json({ tip: null })
     const data = await res.json()
@@ -97,6 +107,14 @@ ${holidayText}
 
     return NextResponse.json({ tip: tip || null })
   } catch (e) {
+    await traceFrontendApiCall({
+      name: 'frontend.calendar_tip.openai',
+      method: 'POST',
+      url: 'https://api.openai.com/v1/chat/completions',
+      request: { model: 'gpt-5-mini', weather, festivals, category, currentHour, holidays_count: holidays.length },
+      error: e instanceof Error ? e.message : String(e),
+      tags: ['frontend', 'calendar-tip', 'openai'],
+    })
     console.error('[calendar-tip] error:', e)
     return NextResponse.json({ tip: null })
   }

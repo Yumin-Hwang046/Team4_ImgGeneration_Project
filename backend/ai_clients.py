@@ -5,6 +5,7 @@ from typing import Dict, Optional, Any
 
 import requests
 from dotenv import load_dotenv
+from observability import trace_model_call, trace_subprocess_call
 
 try:
     import wandb
@@ -343,6 +344,15 @@ def call_image_generator(
             cmd.extend(["--image_path", str(image_path)])
 
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        trace_subprocess_call(
+            name="image_generator.local_pipeline",
+            cmd=cmd,
+            returncode=result.returncode,
+            stdout=result.stdout,
+            stderr=result.stderr,
+            metadata={"run_name": run_name},
+            tags=["subprocess", "image-generator"],
+        )
 
         if result.returncode == 0:
             output_image = _find_output_image(output_dir)
@@ -395,6 +405,20 @@ def _call_local_text_generator(
     try:
         from text_generator.generator import generate_marketing_copy
 
+        trace_model_call(
+            name="text_generator.local_model",
+            provider="local",
+            model="text_generator.generator.generate_marketing_copy",
+            input={
+                "purpose": purpose,
+                "business_category": business_category,
+                "menu_name": menu_name,
+                "location": location,
+                "mood": mood,
+            },
+            metadata={"mode": "local"},
+            tags=["model", "text-generator"],
+        )
         result = generate_marketing_copy(
             purpose=purpose,
             business_category=business_category,
@@ -410,6 +434,19 @@ def _call_local_text_generator(
         if not isinstance(result, dict):
             return {"success": False, "copy": "", "hashtags": [], "error": "non-dict result"}
 
+        trace_model_call(
+            name="text_generator.local_model",
+            provider="local",
+            model="text_generator.generator.generate_marketing_copy",
+            input={"menu_name": menu_name, "purpose": purpose},
+            output={
+                "success": bool(result.get("copy")),
+                "copy_preview": _clean_text(result.get("copy"))[:300],
+                "hashtags": _normalize_hashtags(result.get("hashtags", [])),
+            },
+            metadata={"mode": "local"},
+            tags=["model", "text-generator"],
+        )
         return {
             "success": bool(result.get("copy")),
             "copy": _clean_text(result.get("copy")),
@@ -418,6 +455,15 @@ def _call_local_text_generator(
         }
 
     except Exception as e:
+        trace_model_call(
+            name="text_generator.local_model",
+            provider="local",
+            model="text_generator.generator.generate_marketing_copy",
+            input={"menu_name": menu_name, "purpose": purpose},
+            error=str(e),
+            metadata={"mode": "local"},
+            tags=["model", "text-generator"],
+        )
         return {"success": False, "copy": "", "hashtags": [], "error": str(e)}
 
 
