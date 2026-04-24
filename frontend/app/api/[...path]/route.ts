@@ -23,7 +23,7 @@ async function proxy(request: NextRequest, context: { params: { path?: string[] 
     // body가 있는 메서드만 전달
     let body: BodyInit | undefined = undefined;
     if (request.method !== "GET" && request.method !== "HEAD") {
-      body = await request.text();
+      body = Buffer.from(await request.arrayBuffer());
     }
 
     const backendResponse = await fetch(backendUrl, {
