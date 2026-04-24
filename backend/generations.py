@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import uuid
 from datetime import datetime, date
 from typing import Optional, List
 from pathlib import Path
@@ -1046,7 +1047,12 @@ async def run_generation(
             detail="현재 이미지 생성 모델(Case4)은 image_file 업로드가 필수입니다.",
         )
 
-    saved_path = UPLOAD_DIR / image_file.filename
+    orig_suffix = Path(image_file.filename).suffix.lower()
+    allowed_ext = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"}
+    ext = orig_suffix if orig_suffix in allowed_ext else ".png"
+
+    safe_name = f"{uuid.uuid4().hex}{ext}"
+    saved_path = UPLOAD_DIR / safe_name
     with open(saved_path, "wb") as buffer:
         shutil.copyfileobj(image_file.file, buffer)
     uploaded_filename = str(saved_path)
