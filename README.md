@@ -249,18 +249,44 @@ https://<ngrok-주소>/api/auth/callback/instagram
 ## 3. 📂 프로젝트 구조
 
 ```
-Team4_ImgGeneration_Project/
-├── frontend/                 # Next.js 앱
-│   ├── app/                  # App Router 페이지
-│   ├── components/           # 공통 컴포넌트
-│   └── public/               # 정적 파일
-├── backend/                  # 백엔드 (기술 스택 미확정)
-│   ├── image_analyzer/       # 업로드 이미지 분석
-│   ├── text_generator/       # 광고 문구 생성
-│   ├── image_generator/      # 광고 이미지 생성
-│   └── main.py               # 백엔드 진입점
-├── .env.example
-├── requirements.txt
+Team4_ImgGeneration_Project1/
+├── frontend/                         # Next.js 프론트엔드 (Node.js, TypeScript, TailwindCSS)
+│   ├── app/                          # Next.js App Router 기반 페이지/라우팅
+│   ├── components/                   # UI 컴포넌트 (재사용 컴포넌트 모음)
+│   ├── lib/                          # 클라이언트/유틸 (API 호출, 공통 로직)
+│   ├── public/                       # 정적 파일 (이미지/폰트 등)
+│   ├── next.config.mjs               # Next.js 설정
+│   ├── tailwind.config.ts            # Tailwind 설정
+│   ├── tsconfig.json                 # TypeScript 설정
+│   └── package.json                  # 프론트 의존성/스크립트
+├── backend/                          # FastAPI 백엔드 (Python)
+│   ├── main.py                       # FastAPI 앱 엔트리 (라우터 include, 서버 진입점)
+│   ├── routes/                       # API 라우터 모음 (FastAPI APIRouter)
+│   ├── image_generator/              # 이미지 생성 파이프라인 (Diffusers/SDXL, ControlNet, IP-Adapter 등)
+│   ├── text_generator/               # 문구 생성 로직 (OpenAI API 등)
+│   ├── assets/                       # 생성/프리셋 자산 (presets, generated 등)
+│   ├── test/                         # 실험/테스트 데이터 및 실행 스크립트 (reference, user_input, experiment 등)
+│   ├── auth.py                       # 인증/보안 라우터 (JWT 등)
+│   ├── db.py                         # DB 연결/세션 (SQLAlchemy)
+│   ├── models.py                     # DB 모델 정의 (SQLAlchemy ORM)
+│   ├── schemas.py                    # 요청/응답 스키마 (Pydantic)
+│   ├── ai_clients.py                 # 외부 AI API 클라이언트 (OpenAI 등)
+│   ├── generations.py                # 생성 결과 저장/조회 로직
+│   ├── analytics_router.py           # 상권/분석 API 라우터
+│   ├── analytics_service.py          # 상권/분석 서비스 로직
+│   ├── scheduler.py                  # 스케줄링(자동 실행) 엔트리
+│   ├── scheduler_router.py           # 스케줄러 API 라우터
+│   ├── observability.py              # Langfuse/W&B 로깅 유틸
+│   └── requirements.txt              # 백엔드 의존성 (환경에 따라 torch/diffusers 등 추가)
+├── docs/                             # 문서/자료 (설계, UI, 참고)
+├── model-server/                     # 모델 서버 (Docker, Python) - GPU 환경 추론용
+│   ├── main.py                       # 모델 서버 엔트리
+│   └── Dockerfile                    # 모델 서버 컨테이너 빌드
+├── ngrok/                            # ngrok 설정/실행 파일 (로컬 OAuth 테스트용)
+├── wandb/                            # W&B 실행 로그/아티팩트(실험 산출물)
+├── docker-compose.yml                # 멀티 서비스 구성 (backend/model-server 등)
+├── .env.example                      # 환경변수 템플릿
+├── requirements.txt                  # 루트 의존성 (프로젝트 실행 기준)
 └── README.md
 ```
 
@@ -307,12 +333,12 @@ Team4_ImgGeneration_Project/
 
 ## 5. 👥 팀 소개: Team 4
 
-| 이름 | 역할 |
-|------|------|
-| 황유민 | PM / 모델 |
-| 김슬기 | 모델 |
-| 문진우 | 모델 |
-| 김민주 | 모델 |
+| 이름 | 역할 | Github | 협업일지 |
+|------|------|--------|----------|
+| 황유민 | PM/모델 | [![Yumin-Hwang046](https://github.com/Yumin-Hwang046.png?size=40)](https://github.com/Yumin-Hwang046) | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb906180b7aa05dda6a9739931?v=333826fb906180ffb807000ca369af84) |
+| 김슬기 | 모델 | [![devskk25](https://github.com/devskk25.png?size=40)](https://github.com/devskk25) | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb9061803c87fdcd48cff9c353?v=333826fb906181a08997000ca6f45287) |
+| 문진우 | 프론트엔드/서빙 | [![dinu1108](https://github.com/dinu1108.png?size=40)](https://github.com/dinu1108) | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb9061808b9768ec8ee7f1cd2e?v=333826fb90618136acce000c662dbbc5) |
+| 김민주 | 백엔드/모델 | [![kmjlast-dev](https://github.com/kmjlast-dev.png?size=40)](https://github.com/kmjlast-dev) | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb90618042b9dae519f7f57dc7?v=333826fb906181da9569000c2f5694aa) |
 
 <br>
 
