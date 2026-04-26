@@ -265,6 +265,26 @@ async function requestMultipart<T>(path: string, formData: FormData): Promise<T>
   return res.json() as Promise<T>
 }
 
+function joinOrigin(origin: string, path: string): string {
+  return origin.replace(/\/+$/, '') + path
+}
+
+async function requestMultipartAbsolute<T>(url: string, formData: FormData): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  })
+
+  if (res.status === 401) return handleUnauthorized()
+
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseError(res))
+  }
+
+  return res.json() as Promise<T>
+}
+
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 export const api = {
@@ -292,6 +312,15 @@ export const api = {
       if (params.reference_preset) fd.append('reference_preset', params.reference_preset)
       if (params.channel) fd.append('channel', params.channel)
       if (params.image_file) fd.append('image_file', params.image_file)
+
+      const publicOrigin = process.env.NEXT_PUBLIC_API_URL
+      if (params.image_file && publicOrigin) {
+        return requestMultipartAbsolute<RunGenerationResponse>(
+          joinOrigin(publicOrigin, '/generations/run'),
+          fd
+        )
+      }
+
       return requestMultipart<RunGenerationResponse>('/generations/run', fd)
     },
 
