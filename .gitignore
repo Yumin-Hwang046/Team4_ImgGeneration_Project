@@ -31,3 +31,6 @@ Thumbs.db
 *.png
 *.jpg
 *.jpeg
+
+# (예외) 프론트 레퍼런스 프리뷰는 배포에 포함
+!frontend/public/reference_presets/**
