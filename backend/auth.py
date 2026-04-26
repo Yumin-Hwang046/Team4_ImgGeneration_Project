@@ -56,7 +56,7 @@ def get_current_user(
 def signup(
     email: Annotated[str, Form(..., title="아이디 (E-mail)")],
     password: Annotated[str, Form(..., title="비밀번호")],
-    name: Annotated[str, Form(..., title="이름")],
+    name: Annotated[str, Form(title="이름")] = "",
     db: Session = Depends(get_db),
 ):
     existing_user = db.query(User).filter(User.email == email).first()

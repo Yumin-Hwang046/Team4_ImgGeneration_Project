@@ -11,6 +11,10 @@ interface OpenMeteoResponse {
     precipitation_probability: number[]
     weathercode: number[]
   }
+  daily: {
+    time: string[]
+    weathercode: number[]
+  }
 }
 
 type PrecipType = 'rain' | 'snow' | 'thunder'
@@ -92,7 +96,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,precipitation_probability,weathercode&current=temperature_2m,weathercode&timezone=Asia%2FSeoul&forecast_days=1`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,precipitation_probability,weathercode&current=temperature_2m,weathercode&daily=weathercode&timezone=Asia%2FSeoul&forecast_days=14`
     const res = await fetch(url, { cache: 'no-store' })
     if (!res.ok) return NextResponse.json({ error: 'weather fetch failed' }, { status: 500 })
 
@@ -144,6 +148,11 @@ export async function GET(req: NextRequest) {
       ? `${condition} ${currentTemp}°C · ${precipSummary}`
       : `${condition} ${currentTemp}°C · 최고 ${maxTemp}° / 최저 ${minTemp}°`
 
+    const dailyForecast = (data.daily?.time ?? []).map((date, i) => ({
+      date,
+      icon: wmoToCondition(data.daily.weathercode[i]).icon,
+    }))
+
     return NextResponse.json({
       condition,
       icon,
@@ -157,6 +166,7 @@ export async function GET(req: NextRequest) {
       summary,
       hasRain: rainPeriods.length > 0 || thunderPeriods.length > 0,
       hasSnow: snowPeriods.length > 0,
+      dailyForecast,
     })
   } catch (e) {
     console.error('[weather] error:', e)

@@ -1,0 +1,44 @@
+[34m[1mwandb[0m: Detected [openai] in use.
+[34m[1mwandb[0m: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
+[34m[1mwandb[0m: For more information, check out the docs at: https://weave-docs.wandb.ai
+[32mINFO[0m:     127.0.0.1:59024 - "[1mGET /generations/10 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:59024 - "[1mGET /generations/10 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:59024 - "[1mGET /generations/10 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:59024 - "[1mGET /generations/10 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:59024 - "[1mGET /generations/10 HTTP/1.1[0m" [32m200 OK[0m
+Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}
+[32mINFO[0m:     127.0.0.1:59024 - "[1mGET /generations/10 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:59024 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:59024 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:42324 - "[1mGET /generations/10 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:42324 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:42324 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:53290 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:53290 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:53290 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:53290 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45052 - "[1mGET /generations HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45052 - "[1mGET /generations HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45052 - "[1mGET /generations HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45052 - "[1mGET /generations HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45052 - "[1mGET /generations HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45052 - "[1mGET /generations HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45052 - "[1mGET /calendar/schedules HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /calendar/events?year=2026&month=4 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:52302 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /calendar/schedules HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:52302 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45052 - "[1mGET /calendar/events?year=2026&month=4 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45040 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     Shutting down

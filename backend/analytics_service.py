@@ -15,6 +15,10 @@ SBIZ_SERVICE_KEY = os.getenv("SBIZ_SERVICE_KEY", "")
 SBIZ_API_URL = os.getenv("SBIZ_API_URL", "")
 
 SEOUL_OPEN_API_BASE = "http://openapi.seoul.go.kr:8088"
+DEFAULT_SEOUL_LIVING_POP_SERVICE = "VwsmAdstrdFlpopW"
+DEFAULT_SBIZ_API_URL = (
+    "https://apis.data.go.kr/B553077/api/open/sdctrdartrdarinfopd/storeListInDong"
+)
 
 
 def get_region_name_from_profile(profile) -> str:
@@ -44,8 +48,6 @@ def map_business_category_to_keywords(category: str) -> List[str]:
 def call_seoul_open_api(service_name: str, start: int = 1, end: int = 1000) -> Dict[str, Any]:
     if not SEOUL_OPEN_API_KEY:
         raise RuntimeError("SEOUL_OPEN_API_KEY가 설정되지 않았습니다.")
-    if not SEOUL_LIVING_POP_SERVICE:
-        raise RuntimeError("SEOUL_LIVING_POP_SERVICE가 설정되지 않았습니다.")
 
     url = f"{SEOUL_OPEN_API_BASE}/{SEOUL_OPEN_API_KEY}/json/{service_name}/{start}/{end}"
     resp = requests.get(url, timeout=20)
@@ -113,7 +115,8 @@ def fetch_seoul_floating_population(profile) -> Tuple[Optional[int], Dict[str, A
     target_date = get_target_analysis_date()
     region_name = get_region_name_from_profile(profile)
 
-    payload = call_seoul_open_api(SEOUL_LIVING_POP_SERVICE, 1, 1000)
+    service_name = (SEOUL_LIVING_POP_SERVICE or "").strip() or DEFAULT_SEOUL_LIVING_POP_SERVICE
+    payload = call_seoul_open_api(service_name, 1, 1000)
     rows = extract_rows_from_seoul_response(payload)
 
     if not rows:
@@ -157,8 +160,8 @@ def fetch_seoul_floating_population(profile) -> Tuple[Optional[int], Dict[str, A
 def call_sbiz_api(params: Dict[str, Any]) -> Dict[str, Any]:
     if not SBIZ_SERVICE_KEY:
         raise RuntimeError("SBIZ_SERVICE_KEY가 설정되지 않았습니다.")
-    if not SBIZ_API_URL:
-        raise RuntimeError("SBIZ_API_URL이 설정되지 않았습니다.")
+
+    sbiz_url = (SBIZ_API_URL or "").strip() or DEFAULT_SBIZ_API_URL
 
     query = {
         "serviceKey": SBIZ_SERVICE_KEY,
@@ -168,7 +171,7 @@ def call_sbiz_api(params: Dict[str, Any]) -> Dict[str, Any]:
     }
     query.update(params)
 
-    resp = requests.get(SBIZ_API_URL, params=query, timeout=20)
+    resp = requests.get(sbiz_url, params=query, timeout=20)
     resp.raise_for_status()
     return resp.json()
 

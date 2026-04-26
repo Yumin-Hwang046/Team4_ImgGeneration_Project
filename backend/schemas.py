@@ -306,6 +306,7 @@ class InstagramUploadResponse(BaseModel):
     channel: str
     status: str
     message: str
+    permalink: Optional[str] = None
 
 
 class InstagramScheduleUploadRequest(BaseModel):
