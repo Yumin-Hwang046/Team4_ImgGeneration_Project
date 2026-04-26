@@ -82,6 +82,7 @@ export interface RunGenerationRequest {
   target_date: string
   target_time?: string
   mood?: string
+  reference_preset?: string
   extra_prompt?: string
   reference_preset?: string
   channel?: string
@@ -308,6 +309,7 @@ export const api = {
       fd.append('target_date', params.target_date)
       if (params.target_time) fd.append('target_time', params.target_time)
       if (params.mood) fd.append('mood', params.mood)
+      if (params.reference_preset) fd.append('reference_preset', params.reference_preset)
       if (params.extra_prompt) fd.append('extra_prompt', params.extra_prompt)
       if (params.reference_preset) fd.append('reference_preset', params.reference_preset)
       if (params.channel) fd.append('channel', params.channel)

@@ -272,6 +272,7 @@ def call_image_generator(
     menu_name: str,
     location: str,
     mood: Optional[str],
+    reference_preset: Optional[str],
     recommended_concept: str,
     extra_prompt: Optional[str] = None,
     image_path: Optional[str] = None,
