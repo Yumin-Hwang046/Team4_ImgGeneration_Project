@@ -25,13 +25,15 @@
 | **디저트류(3번 배경)** | scale 0.55, anchor_y 0.98 | 푸딩, 케이크 등 다수 품목에 대해 하단 끝단 밀착형 자동 배치 적용 |
 
 ## 3. 기술적 사양 (Technical Setup)
-- **Background Handling**: 원본 비율 유지 리사이즈 (No Distortion, No Cropping)
+- **Background Handling**: 원본 비율 보존 리사이즈 (No Padding, No Cropping)
 - **Frame Size**: 768px (속도 및 메모리 효율 최적화)
-- **Composition Method**: Direct Alpha Blending (AI 보정 생략으로 원본 픽셀 보존)
-- **Shadow Effect**: Gaussian Blur 기반 동적 그림자 레이어 생성
+- **Composition Method**: Hybrid (Pillow Blending + Generative Outpainting)
+- **Refinement**: SDXL Base Image-to-Image (Denoising Strength: 0.25 - 원본 유지 및 잘린 경계선 복원 중심)
+- **Shadow Effect**: 이중 레이어 동적 그림자 (Contact + Soft Shadow)
+- **Artifact Fix**: Shadow box/Rectangular artifacts 제거를 위한 전역 캔버스 블러 방식 채택
 - **Layout System**: `LAYOUT_PRESETS`를 통한 배경별 자동 좌표/스케일 할당
 - **Edge Smoothing**: 알파 채널 가우시안 블러(Radius 1.2) 안티앨리어싱 적용
-- **Color Matching**: Global Mean-Shift 로직 적용 (배경 톤 반영률 15%)
+- **Color Matching**: Local Mean-Shift 로직 적용 (제품 배치 영역의 배경색 25% 반영)
 - **Processing Speed**: 모델 로딩 생략으로 실행 즉시 결과 도출 가능
 
 ## 4. 실험 결과 요약
