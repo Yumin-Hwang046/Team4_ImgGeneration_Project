@@ -1,0 +1,32 @@
+[32mINFO[0m:     127.0.0.1:49586 - "[1mGET /generations/16 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:49586 - "[1mGET /generations/16 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:49586 - "[1mGET /generations/16 HTTP/1.1[0m" [32m200 OK[0m
+[GENERATION][IMAGE][FAIL] {'success': False, 'image_url': None, 'prompt_used': '업종: 카페&베이커리 | 메뉴:  | 지역: 서울 서대문구 봉원사2길 10-2 | 추천 컨셉: 계절감과 공간 무드를 함께 살리는 카페·디저트 중심 / 점심 시간대 / 공간 분위기와 메뉴 매력 균형 강조 / 무드 반영: warm / 대표 메뉴 강조:  | 무드: warm', 'error': 'Image pipeline exited with code 1. stderr: `Siglip2ImageProcessorFast` is deprecated. The `Fast` suffix for image processors has been removed; use `Siglip2ImageProcessor` instead.\nTraceback (most recent call last):\n  File "/home/apple/Team4_ImgGeneration_Project/backend/image_generator/run_pipeline.py", line 74, in <module>\n    run_pipeline()\n  File "/home/apple/Team4_ImgGeneration_Project/backend/image_generator/run_pipeline.py", line 55, in run_pipeline\n    result = generate_image_case4_ip_adapter(\n  File "/home/apple/Team4_ImgGeneration_Project/backend/image_generator/case4_ip_adapter.py", line 58, in generate_image_case4_ip_adapter\n    init_image = Image.open(user_image_path).convert("RGB").resize((width, height), Image.BICUBIC)\n  File "/home/apple/Team4_ImgGeneration_Project/.venv/lib/python3.10/site-packages/PIL/Image.py", line 3498, in open\n    raise UnidentifiedImageError(msg)\nPIL.UnidentifiedImageError: cannot identify image file \'/home/apple/Team4_ImgGeneration_Project/backend/uploads/793ee412d61e476a8cd080a1997ccc87.png\' cmd: /home/apple/Team4_ImgGeneration_Project/.venv/bin/python /home/apple/Team4_ImgGeneration_Project/backend/image_generator/run_pipeline.py --prompt 업종: 카페&베이커리 | 메뉴:  | 지역: 서울 서대문구 봉원사2길 10-2 | 추천 컨셉: 계절감과 공간 무드를 함께 살리는 카페·디저트 중심 / 점심 시간대 / 공간 분위기와 메뉴 매력 균형 강조 / 무드 반영: warm / 대표 메뉴 강조:  | 무드: warm --output_dir /home/apple/Team4_ImgGeneration_Project/backend/generated/_카페_베이커리 --reference_image_path /home/apple/Team4_ImgGeneration_Project/backend/image_generator/reference_presets/default.png --image_path /home/apple/Team4_ImgGeneration_Project/backend/uploads/793ee412d61e476a8cd080a1997ccc87.png'}
+[32mINFO[0m:     127.0.0.1:49586 - "[1mGET /generations/16 HTTP/1.1[0m" [32m200 OK[0m
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/home/apple/Team4_ImgGeneration_Project/.venv/lib/python3.10/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+AttributeError: module 'bcrypt' has no attribute '__about__'
+[32mINFO[0m:     127.0.0.1:46256 - "[1mPOST /auth/login HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:46256 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:46256 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:46256 - "[1mGET /generations HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:46256 - "[1mGET /generations HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:46256 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:46256 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mPOST /generations/run HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:40258 - "[1mGET /generations/17 HTTP/1.1[0m" [32m200 OK[0m

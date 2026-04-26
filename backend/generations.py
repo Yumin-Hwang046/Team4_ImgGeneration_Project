@@ -594,6 +594,15 @@ def get_next_version_no(db: Session, generation_id: int) -> int:
     return 1 if not latest else latest.version_no + 1
 
 
+def _extract_reference_preset(extra_info: Optional[str]) -> Optional[str]:
+    text = extra_info or ""
+    match = re.search(r"^\[REFERENCE_PRESET\]\s*(.+)$", text, flags=re.MULTILINE)
+    if match:
+        value = match.group(1).strip()
+        return value or None
+    return None
+
+
 def process_generation_task(
     generation_id: int,
     purpose: str,
@@ -665,9 +674,17 @@ def process_generation_task(
         if uploaded_filename:
             original_image_url = to_public_media_url(uploaded_filename)
             source_image_path = uploaded_filename
-            extra_info = f"[IMAGE_ANALYSIS] 업로드 이미지 분석 완료: {uploaded_filename}\n[USER_PROMPT] {extra_prompt or ''}"
+            extra_info = (
+                f"[REFERENCE_PRESET] {reference_preset or ''}\n"
+                f"[IMAGE_ANALYSIS] 업로드 이미지 분석 완료: {uploaded_filename}\n"
+                f"[USER_PROMPT] {extra_prompt or ''}"
+            )
         else:
-            extra_info = f"[NO_UPLOAD_IMAGE]\n[USER_PROMPT] {extra_prompt or ''}"
+            extra_info = (
+                f"[REFERENCE_PRESET] {reference_preset or ''}\n"
+                f"[NO_UPLOAD_IMAGE]\n"
+                f"[USER_PROMPT] {extra_prompt or ''}"
+            )
 
         raw_image_result = call_image_generator(
             business_category=business_category,
@@ -676,6 +693,7 @@ def process_generation_task(
             mood=mood,
             reference_preset=reference_preset,
             recommended_concept=recommended_concept,
+            reference_preset=reference_preset,
             extra_prompt=extra_prompt,
             image_path=source_image_path,
         )
@@ -836,6 +854,7 @@ def process_regenerate_task(generation_id: int):
             mood=generation.mood,
             reference_preset=None,
             recommended_concept=recommended_concept,
+            reference_preset=_extract_reference_preset(generation.extra_info),
             extra_prompt=None,
             image_path=source_image_path,
         )

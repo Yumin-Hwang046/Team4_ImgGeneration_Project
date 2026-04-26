@@ -172,7 +172,27 @@ def _build_image_prompt(
     return " | ".join(parts)
 
 
-def _resolve_reference_preset_path(mood: Optional[str]) -> Path:
+def _resolve_reference_preset_path(
+    mood: Optional[str],
+    reference_preset: Optional[str] = None,
+) -> Path:
+    preset_key = _clean_text(reference_preset).lower()
+    explicit_number_map = {
+        "fc_205.png": "1",
+        "fc_206.png": "2",
+        "fc_211.png": "3",
+        "fc_217.png": "4",
+        "warm.png": "1",
+        "clean.png": "2",
+        "trendy.png": "3",
+        "premium.png": "4",
+        "1": "1",
+        "2": "2",
+        "3": "3",
+        "4": "4",
+    }
+    explicit_number = explicit_number_map.get(preset_key)
+
     mood_key = _clean_text(mood).lower()
     preset_number_map = {
         "warm": "1",
@@ -186,7 +206,16 @@ def _resolve_reference_preset_path(mood: Optional[str]) -> Path:
     }
     preferred_number = preset_number_map.get(mood_key, "1")
 
-    for number in (preferred_number, "1", "2", "3", "4"):
+    numbers_to_try = []
+    if explicit_number:
+        numbers_to_try.append(explicit_number)
+    numbers_to_try.extend([preferred_number, "1", "2", "3", "4"])
+
+    seen = set()
+    for number in numbers_to_try:
+        if number in seen:
+            continue
+        seen.add(number)
         candidates = sorted(path for path in REFERENCE_PRESET_DIR.glob(f"{number}*") if path.is_file())
         if candidates:
             return candidates[0]
@@ -274,6 +303,7 @@ def call_image_generator(
     mood: Optional[str],
     reference_preset: Optional[str],
     recommended_concept: str,
+    reference_preset: Optional[str] = None,
     extra_prompt: Optional[str] = None,
     image_path: Optional[str] = None,
 ) -> Dict:
@@ -304,7 +334,7 @@ def call_image_generator(
 
                 exp16_result = generate_image_exp16_api(
                     user_image_path=str(image_path),
-                    reference_image_path=str(_resolve_reference_preset_path(mood)),
+                    reference_image_path=str(_resolve_reference_preset_path(mood, reference_preset)),
                     user_prompt=prompt,
                     format_type="피드",
                     output_subdir=run_name,

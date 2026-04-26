@@ -31,19 +31,12 @@ services:
       dockerfile: model-server/Dockerfile
     ports:
       - "8001:8001"
-    env_file:                               
+    env_file:
       - model-server/.env
     volumes:
       - /home/apple/.cache/huggingface:/root/.cache/huggingface:ro
       - /home/apple/Team4_ImgGeneration_Project/backend/image_generator:/app/image_generator:ro
       - /home/apple/Team4_ImgGeneration_Project/backend/text_generator:/app/text_generator:ro
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     restart: unless-stopped
 
 volumes:

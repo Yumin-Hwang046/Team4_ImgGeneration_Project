@@ -1,0 +1,26 @@
+[32mINFO[0m:     127.0.0.1:43778 - "[1mGET /generations/22 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:43778 - "[1mGET /generations/22 HTTP/1.1[0m" [32m200 OK[0m
+[GENERATION][IMAGE][FAIL] {'success': False, 'image_url': None, 'prompt_used': '업종: 카페&베이커리 | 메뉴:  | 지역: 서울 서대문구 봉원사2길 10-4 | 추천 컨셉: 계절감과 공간 무드를 함께 살리는 카페·디저트 중심 / 점심 시간대 / 공간 분위기와 메뉴 매력 균형 강조 / 무드 반영: warm / 대표 메뉴 강조:  | 무드: warm', 'error': "GPT-image 경로 실패 후 사용할 로컬 SDXL fallback은 제거되었습니다. | exp16_error='OpenAI' object has no attribute 'responses'"}
+[32mINFO[0m:     127.0.0.1:43778 - "[1mGET /generations/22 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:53010 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:53010 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45366 - "[1mPOST /generations/run HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45366 - "[1mGET /generations/23 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45366 - "[1mGET /generations/23 HTTP/1.1[0m" [32m200 OK[0m
+[GENERATION][IMAGE][FAIL] {'success': False, 'image_url': None, 'prompt_used': '업종: 카페&베이커리 | 메뉴:  | 지역: 서울 서대문구 봉원사2길 10-4 | 추천 컨셉: 계절감과 공간 무드를 함께 살리는 카페·디저트 중심 / 점심 시간대 / 공간 분위기와 메뉴 매력 균형 강조 / 무드 반영: warm / 대표 메뉴 강조:  | 무드: warm', 'error': "GPT-image 경로 실패 후 사용할 로컬 SDXL fallback은 제거되었습니다. | exp16_error='OpenAI' object has no attribute 'responses'"}
+[32mINFO[0m:     127.0.0.1:45366 - "[1mGET /generations/23 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45050 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:45050 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:39958 - "[1mPOST /generations/run HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:39958 - "[1mGET /generations/24 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:39958 - "[1mGET /generations/24 HTTP/1.1[0m" [32m200 OK[0m
+[GENERATION][IMAGE][FAIL] {'success': False, 'image_url': None, 'prompt_used': '업종: 카페&베이커리 | 메뉴:  | 지역: 서울 서대문구 봉원사2길 10-4 | 추천 컨셉: 계절감과 공간 무드를 함께 살리는 카페·디저트 중심 / 점심 시간대 / 공간 분위기와 메뉴 매력 균형 강조 / 무드 반영: warm / 대표 메뉴 강조:  | 무드: warm', 'error': "GPT-image 경로 실패 후 사용할 로컬 SDXL fallback은 제거되었습니다. | exp16_error='OpenAI' object has no attribute 'responses'"}
+[32mINFO[0m:     127.0.0.1:39958 - "[1mGET /generations/24 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:36948 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:36948 - "[1mGET /auth/me HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:43038 - "[1mPOST /generations/run HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:43038 - "[1mGET /generations/25 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     127.0.0.1:43038 - "[1mGET /generations/25 HTTP/1.1[0m" [32m200 OK[0m
+[GENERATION][IMAGE][FAIL] {'success': False, 'image_url': None, 'prompt_used': '업종: 카페&베이커리 | 메뉴:  | 지역: 서울 서대문구 봉원사2길 10-4 | 추천 컨셉: 계절감과 공간 무드를 함께 살리는 카페·디저트 중심 / 점심 시간대 / 공간 분위기와 메뉴 매력 균형 강조 / 무드 반영: warm / 대표 메뉴 강조:  | 무드: warm', 'error': "GPT-image 경로 실패 후 사용할 로컬 SDXL fallback은 제거되었습니다. | exp16_error='OpenAI' object has no attribute 'responses'"}
+[32mINFO[0m:     127.0.0.1:43038 - "[1mGET /generations/25 HTTP/1.1[0m" [32m200 OK[0m
+[32mINFO[0m:     Shutting down
