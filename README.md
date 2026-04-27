@@ -398,7 +398,7 @@ Team4_ImgGeneration_Project1/
 
 ## 7. 📎 참고 자료 및 산출물
 
-- 📘 최종 보고서(PDF): [다운로드](docs/The_Digital_Curator.pdf?raw=1)
+- 📘 최종 보고서(PDF): [다운로드](https://github.com/Yumin-Hwang046/Team4_ImgGeneration_Project/raw/main/docs/The_Digital_Curator.pdf)
 - 📽️ 발표자료 (PPT): [확인하기](#)
 
 <br>
