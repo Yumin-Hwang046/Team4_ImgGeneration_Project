@@ -6,13 +6,18 @@ import time
 import numpy as np
 from pathlib import Path
 
+import gc
 import torch
 from diffusers import ControlNetModel, StableDiffusionXLControlNetInpaintPipeline
 from PIL import Image, ImageFilter, ImageStat, ImageEnhance
-from transformers import pipeline as transformers_pipeline
+from transformers import pipeline as transformers_pipeline, CLIPTokenizer
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from observability import build_langfuse_media_list, log_langfuse_trace
+try:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from observability import build_langfuse_media_list, log_langfuse_trace
+except ImportError:
+    def build_langfuse_media_list(paths): return []
+    def log_langfuse_trace(**kwargs): pass
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "generated" / "merged" / "exp47_depth"
@@ -32,7 +37,7 @@ SDXL_BASE_CACHE_ROOT = (
     / "models--stabilityai--stable-diffusion-xl-base-1.0"
     / "snapshots"
 )
-FRAME_SIZE = 768
+FRAME_SIZE = 512
 
 # 배경별 최적 구도 프리셋 (자동 계산용)
 # anchor_y는 물체의 '하단'이 위치할 지점을 의미합니다 (접지감 극대화).
@@ -134,24 +139,76 @@ def resolve_base_model_path() -> str:
     return SDXL_INPAINT_MODEL_ID
 
 
+def _apply_ip_adapter_tuple_patch() -> None:
+    """
+    Monkey-patch ALL diffusers attention processor classes to handle any-depth
+    tuple encoder_hidden_states produced by IP-Adapter + ControlNet pipelines.
+
+    - IP-Adapter processors: strip only extra *outer* tuple wrapping; they need
+      the inner (text_tensor, ip_embeds) 2-tuple to remain intact.
+    - All other processors: strip ALL tuple wrapping so they receive a plain tensor.
+
+    Patching happens at the class level so it covers every future instance,
+    including those created by load_ip_adapter().
+    """
+    try:
+        import diffusers.models.attention_processor as ap
+
+        def _make_patched(orig_fn: callable, is_ip_cls: bool) -> callable:
+            def patched_call(self, attn, hidden_states, encoder_hidden_states=None, **kwargs):
+                if encoder_hidden_states is not None:
+                    if is_ip_cls:
+                        # Unwrap extra outer layers only; keep the innermost 2-tuple intact.
+                        while (
+                            isinstance(encoder_hidden_states, (tuple, list))
+                            and len(encoder_hidden_states) > 0
+                            and isinstance(encoder_hidden_states[0], (tuple, list))
+                        ):
+                            encoder_hidden_states = encoder_hidden_states[0]
+                    else:
+                        # Non-IP processor: dig down to the raw tensor.
+                        while isinstance(encoder_hidden_states, (tuple, list)):
+                            if len(encoder_hidden_states) == 0:
+                                encoder_hidden_states = None
+                                break
+                            encoder_hidden_states = encoder_hidden_states[0]
+                return orig_fn(self, attn, hidden_states, encoder_hidden_states, **kwargs)
+            return patched_call
+
+        patched = []
+        for name in dir(ap):
+            cls = getattr(ap, name)
+            if not (isinstance(cls, type) and "Processor" in name and callable(getattr(cls, "__call__", None))):
+                continue
+            if getattr(cls, "_tuple_safe_patched", False):
+                continue
+            cls.__call__ = _make_patched(cls.__call__, "IPAdapter" in name)
+            cls._tuple_safe_patched = True
+            patched.append(name)
+
+        print(f"[IP-Adapter Fix] Patched {len(patched)} processor classes: {', '.join(patched)}")
+    except Exception as exc:
+        print(f"[IP-Adapter Fix] WARNING: patch failed: {exc}")
+
+
 def load_pipeline() -> StableDiffusionXLControlNetInpaintPipeline:
     """배경 보존 및 자연스러운 합성을 위한 SDXL Inpainting 파이프라인을 로드합니다."""
     model_path = resolve_base_model_path()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
-    
+
     print(f"loading controlnet: {CONTROLNET_DEPTH_ID}")
     controlnet = ControlNetModel.from_pretrained(
-        CONTROLNET_DEPTH_ID, 
-        torch_dtype=dtype, 
+        CONTROLNET_DEPTH_ID,
+        torch_dtype=dtype,
         use_safetensors=True
     )
 
     print(f"loading inpainting model: {model_path} on {device}")
     pipe = StableDiffusionXLControlNetInpaintPipeline.from_pretrained(
-        model_path, 
+        model_path,
         controlnet=controlnet,
-        torch_dtype=dtype, 
+        torch_dtype=dtype,
         variant="fp16" if device == "cuda" else None,
         use_safetensors=True
     )
@@ -164,13 +221,38 @@ def load_pipeline() -> StableDiffusionXLControlNetInpaintPipeline:
         weight_name=IP_ADAPTER_WEIGHT,
     )
 
-    if device == "cuda":
-        pipe.enable_model_cpu_offload()
+    # load_ip_adapter() 호출 후 모든 프로세서 클래스를 패치한다.
+    # 파일 패치는 캐시/버전 문제로 불안정하므로, 런타임 monkey-patch로 대체.
+    _apply_ip_adapter_tuple_patch()
 
-    # Depth 추정을 위한 모델 추가 로드
-    print("Loading depth estimator...")
-    pipe.depth_estimator = transformers_pipeline("depth-estimation", model="Intel/dpt-hybrid-midas", device=device)
+    if device == "cuda":
+        try:
+            pipe.enable_xformers_memory_efficient_attention()
+            print("[Pipeline] xformers memory efficient attention enabled")
+        except Exception as xe:
+            print(f"[Pipeline] xformers unavailable, falling back to default attention: {xe}")
+        pipe.enable_vae_slicing()
+        pipe.enable_vae_tiling()
+        # sequential offload: 레이어 단위로 VRAM ↔ RAM 이동 → model_cpu_offload 대비 RAM 사용량 대폭 감소
+        pipe.enable_sequential_cpu_offload()
+
+    # Depth 추정 모델은 CPU에서 실행하여 VRAM 충돌 방지
+    print("Loading depth estimator (CPU)...")
+    pipe.depth_estimator = transformers_pipeline(
+        "depth-estimation", model="Intel/dpt-hybrid-midas", device="cpu"
+    )
+
+    # CLIP 토크나이저: 프롬프트 길이 제한용 (SDXL 두 인코더 모두 77 토큰 한계)
+    pipe._clip_tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
     return pipe
+
+
+def clip_truncate(text: str, tokenizer: CLIPTokenizer, max_tokens: int = 60) -> str:
+    """CLIP 토크나이저 기준으로 텍스트를 max_tokens 이하로 자릅니다."""
+    ids = tokenizer.encode(text, add_special_tokens=False)
+    if len(ids) <= max_tokens:
+        return text
+    return tokenizer.decode(ids[:max_tokens], skip_special_tokens=True)
 
 
 def prepare_background(image: Image.Image) -> Image.Image:
@@ -374,28 +456,24 @@ def build_initial_composite(job: dict[str, object], args: argparse.Namespace) ->
     frame.alpha_composite(shadow_layer)
     frame.alpha_composite(obj, (x, y))
 
-    # --- [고도화] Rim Masking: 테두리와 접지면만 집중 수정 ---
-    # 1. 경계선 안팎으로 마스크 확장: 거친 단면을 AI가 새로 그릴 수 있도록 범위를 안팎으로 설정
-    # Erosion 범위를 넓게 유지하여 검은 테두리 영역을 AI가 완전히 덮어쓰도록 유도
+    # --- Rim + Shadow Masking: 제품 바깥 영역만 AI가 수정 ---
+    # 제품 내부는 건드리지 않고, 제품 경계 바깥 얇은 테두리 + 그림자 영역만 마스킹
     dilated_rim = temp_mask_canvas.filter(ImageFilter.MaxFilter(size=11))
-    eroded_rim = temp_mask_canvas.filter(ImageFilter.MinFilter(size=31)) # 조금 더 과감하게 수축
+    # 제품 바깥으로 확장된 영역 - 원본 제품 마스크 = 제품 바깥 테두리만
+    rim_area = np.clip(
+        np.array(dilated_rim).astype(int) - np.array(temp_mask_canvas).astype(int),
+        0, 255
+    ).astype(np.uint8)
 
-    rim_area = np.array(dilated_rim) - np.array(eroded_rim)
-    rim_area = np.clip(rim_area, 0, 255).astype(np.uint8)
-    
-    # 3. 접지면 및 그림자 영역 확장
+    # 접지면 및 그림자 영역 (제품 아래로 이동)
     expanded_shadow = temp_mask_canvas.filter(ImageFilter.MaxFilter(size=41))
     shadow_mask_only = Image.new("L", frame.size, 0)
-    # 팁: 그림자 마스크만 아래로 이동시켜야 객체 테두리(Rim) 마스크와 겹치지 않음
     shadow_mask_only.paste(expanded_shadow, (0, max(20, oh // 6)))
-    
-    # 4. 최종 마스크 결합 (테두리 + 그림자)
-    # 원본 테두리(rim_area)는 제자리에, 그림자만 이동된 상태로 결합
+
+    # 최종 마스크: 바깥 테두리 + 그림자 (제품 내부 픽셀 없음)
     combined_mask = np.maximum(rim_area, np.array(shadow_mask_only))
-    
-    # 마스크 경계를 더 정교하게 다듬음
     final_mask = Image.fromarray(combined_mask.astype(np.uint8))
-    final_mask = final_mask.filter(ImageFilter.GaussianBlur(radius=10)) # 대비 강화 제거하여 부드러운 전이 유도
+    final_mask = final_mask.filter(ImageFilter.GaussianBlur(radius=10))
 
     # 최종 합성 전 미세 보정: 배경과 너무 따로 놀지 않게 전체적인 채도/대비 미세 조정
     final_img = frame.convert("RGB")
@@ -404,7 +482,7 @@ def build_initial_composite(job: dict[str, object], args: argparse.Namespace) ->
     enhancer = ImageEnhance.Contrast(final_img)
     final_img = enhancer.enhance(1.02) # 대비 아주 살짝 강화
 
-    return final_img, final_mask, bg.convert("RGB"), temp_mask_canvas
+    return final_img, final_mask, bg.convert("RGB"), temp_mask_canvas, obj, (x, y)
 
 
 def run_job(
@@ -413,7 +491,7 @@ def run_job(
     output_dir: Path,
     args: argparse.Namespace,
 ) -> Path:
-    image, mask, bg_ref, obj_mask = build_initial_composite(job, args)
+    image, mask, bg_ref, obj_mask, original_obj, obj_pos = build_initial_composite(job, args)
     
     # --- ControlNet용 가이드 이미지 생성 (Depth Map) ---
     # 객체의 3차원 형태를 추출하여 볼륨감과 거리감을 AI에게 전달
@@ -421,22 +499,29 @@ def run_job(
     depth_result = pipe.depth_estimator(image)
     control_image = depth_result["depth"].convert("RGB")
 
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     if pipe is not None:
         print(f"Refining {job['name']} with AI (Strength: {args.strength}) for Harmony & Generative Fill...")
         
         # 사용자가 입력한 IP-Adapter 스케일 적용
         pipe.set_ip_adapter_scale(args.ip_scale)
-        
+
         # 배경 프리셋에서 카메라 각도 힌트 추출
         bg_path = resolve_existing_path(Path(job["background"]))
         view_angle = LAYOUT_PRESETS.get(bg_path.stem, {}).get("view_angle", "professional photography angle")
 
+        # CLIP 77 토큰 제한 대응: 고정 suffix(~17 토큰)를 남기고 사용자 프롬프트를 60 토큰 이내로 자름
+        tokenizer = getattr(pipe, "_clip_tokenizer", None)
+        user_prompt = job.get("prompt", "")
+        if tokenizer is not None:
+            user_prompt = clip_truncate(user_prompt, tokenizer, max_tokens=50)
+
         # Harmonization에 집중된 프롬프트: 새로운 생성보다는 '조화'와 '광원 일치'를 강조
         refine_prompt = (
-            f"Masterpiece, award-winning food photography, {job.get('prompt', '')}. {view_angle}. "
-            "Natural studio lighting, global illumination, ray-traced shadows. "
-            "Subsurface scattering on food, realistic light wrap, unified color temperature. "
-            "Sharp textures, professional food styling, high commercial quality, 8k, crisp."
+            f"food photography, {user_prompt}. {view_angle}. "
+            "natural lighting, realistic shadows, sharp textures, high quality."
         )
         negative_prompt = f"{NEGATIVE_PROMPT}, plastic look, flat lighting, low contrast, dull colors"
         
@@ -447,7 +532,7 @@ def run_job(
             image=image,
             control_image=control_image,
             mask_image=mask,
-            ip_adapter_image=bg_ref, # 배경 이미지를 스타일 레퍼런스로 사용
+            ip_adapter_image=bg_ref,
             controlnet_conditioning_scale=args.control_scale, # 형태 제어 강도
             control_guidance_end=0.85, # 생성 마지막 단계에서 제어를 풀어 자연스러운 블렌딩 유도
             strength=args.strength,
@@ -455,6 +540,15 @@ def run_job(
             guidance_scale=args.guidance,
             generator=torch.manual_seed(42),
         ).images[0]
+
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        # AI가 제품 영역을 임의로 바꾸지 않도록 원본 누끼를 그 자리에 다시 붙임
+        image_rgba = image.convert("RGBA")
+        image_rgba.alpha_composite(original_obj, obj_pos)
+        image = image_rgba.convert("RGB")
 
         # 1. 광고용 뷰티 리터칭 적용 (블룸 효과 축소 버전)
         image = apply_beauty_retouch(image, obj_mask)
@@ -478,6 +572,9 @@ def main() -> None:
         outputs = []
         for idx, job in enumerate(JOBS):
             outputs.append(run_job(pipe, job, args.output_dir, args))
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
         log_langfuse_trace(
             name="image_generator.merge_with_sdxl_base_composition_v1",
             input={"args": vars(args), "jobs": [{k: str(v) if isinstance(v, Path) else v for k, v in job.items()} for job in JOBS]},

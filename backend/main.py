@@ -8,16 +8,6 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles                                                                                   
 from fastapi.middleware.cors import CORSMiddleware
 
-# Ensure sibling modules are importable in both run modes:
-# - `uvicorn main:app` from `backend/`
-# - `uvicorn backend.main:app` from project root
-BACKEND_DIR = Path(__file__).resolve().parent
-if str(BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(BACKEND_DIR))
-
-# Ensure sibling modules are importable in both run modes:
-# - `uvicorn main:app` from `backend/`
-# - `uvicorn backend.main:app` from project root
 BACKEND_DIR = Path(__file__).resolve().parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
@@ -57,6 +47,7 @@ app.add_middleware(
         "https://team4-img-generation-project-w6nw.vercel.app",
         "http://localhost:3000",
         "http://localhost:5173",
+        "*",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -96,12 +87,6 @@ try:
     app.include_router(text_router)
 except ImportError as e:
     print(f"[main] text_router not loaded: {e}")
-
-try:
-    from routes.image_router import router as image_router
-    app.include_router(image_router)
-except ImportError as e:
-    print(f"[main] image_router not loaded: {e}")
 
 try:
     from analytics_router import router as analytics_router

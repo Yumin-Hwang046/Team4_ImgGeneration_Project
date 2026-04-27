@@ -1042,7 +1042,7 @@ async def run_generation(
     background_tasks: BackgroundTasks,
     purpose: str = Form(...),
     business_category: str = Form(...),
-    menu_name: str = Form(...),
+    menu_name: str = Form(""),
     location: str = Form(...),
     target_date: str = Form(...),
     target_time: Optional[str] = Form(None),
