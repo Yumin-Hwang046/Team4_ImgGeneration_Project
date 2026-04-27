@@ -398,7 +398,8 @@ Team4_ImgGeneration_Project1/
 
 ## 7. 📎 참고 자료 및 산출물
 
-- 📘 최종 보고서: [다운로드](#)
+- 📘 최종 보고서(PDF): [다운로드](docs/The_Digital_Curator.pdf?raw=1)
+- 📽️ 발표자료 (PPT): [확인하기](#)
 
 <br>
 
