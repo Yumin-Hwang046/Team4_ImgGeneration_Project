@@ -1,0 +1,58 @@
+_wandb:
+    value:
+        cli_version: 0.26.0
+        e:
+            c7m2syfg22pfyb7x1l5tk9b2ix4i6n7p:
+                codePath: backend/test/experiment/run_case5_experiments.py
+                codePathLocal: test/experiment/run_case5_experiments.py
+                cpu_count: 2
+                cpu_count_logical: 4
+                cudaVersion: "12.4"
+                disk:
+                    /:
+                        total: "105426538496"
+                        used: "79128477696"
+                email: yumin.hwang495@gmail.com
+                executable: /home/apple/Team4_ImgGeneration_Project/backend/.venv/bin/python
+                git:
+                    commit: 6f247c3c6b11b929f60ba06e43fda602a35de166
+                    remote: https://github.com/Yumin-Hwang046/Team4_ImgGeneration_Project.git
+                gpu: NVIDIA L4
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 7424
+                      memoryTotal: "24152899584"
+                      name: NVIDIA L4
+                      uuid: GPU-55888a9a-5a52-e8eb-e1d8-2c58a6addcbc
+                host: instance-20260405-204448
+                memory:
+                    total: "16785809408"
+                os: Linux-5.10.0-34-cloud-amd64-x86_64-with-glibc2.31
+                program: /home/apple/Team4_ImgGeneration_Project/backend/test/experiment/run_case5_experiments.py
+                python: CPython 3.10.17
+                root: /home/apple/Team4_ImgGeneration_Project/backend
+                startedAt: "2026-04-16T08:52:14.764524Z"
+                writerId: c7m2syfg22pfyb7x1l5tk9b2ix4i6n7p
+        m: []
+        python_version: 3.10.17
+        t:
+            "1":
+                - 1
+                - 11
+                - 41
+                - 49
+                - 71
+                - 83
+            "2":
+                - 1
+                - 11
+                - 41
+                - 49
+                - 71
+                - 83
+            "4": 3.10.17
+            "5": 0.26.0
+            "6": 4.44.2
+            "12": 0.26.0
+            "13": linux-x86_64
