@@ -1,7 +1,11 @@
 from diffusers import DiffusionPipeline
 import torch
+import sys
+import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from observability import build_langfuse_media_list, log_langfuse_trace
 
 def get_device():
     return "cuda" if torch.cuda.is_available() else "cpu"
@@ -38,6 +42,7 @@ class FluxGenerator:
         guidance_scale: float = 5.0,
         num_inference_steps: int = 30,
     ):
+        start_time = time.time()
         if self.pipe is None:
             self.load()
 
@@ -58,6 +63,22 @@ class FluxGenerator:
         image.save(output_path)
 
         print(f"[FLUX] Saved to {output_path}")
+        log_langfuse_trace(
+            name="image_generator.inference_flux",
+            input={
+                "prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "output_path": output_path,
+                "height": height,
+                "width": width,
+                "guidance_scale": guidance_scale,
+                "num_inference_steps": num_inference_steps,
+                "device": self.device,
+            },
+            output={"saved_paths": [output_path], "output_images": build_langfuse_media_list([output_path])},
+            metadata={"duration_sec": time.time() - start_time},
+            tags=["image_generator", "experiment", "flux"],
+        )
 
 
 if __name__ == "__main__":

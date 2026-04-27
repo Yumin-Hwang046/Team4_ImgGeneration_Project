@@ -1,0 +1,47 @@
+# 📋 이미지 합성 및 구도 최적화 실험 보고서 (Composition Experiment)
+
+## 1. 실험 목적
+- 배경 제거(rembg) 처리된 제품 이미지를 홍보용 배경에 자연스럽게 합성.
+- **제품 이미지의 원본성을 100% 유지**하면서 배경과 조화로운 '광고용 Hero Shot' 구도 도출.
+- SDXL Base 모델을 활용한 img2img 공정의 안정성 확보.
+
+## 2. 주요 해결 과제 및 수행 내용
+
+### 2.1. 투명 여백 자동 제거 (Bounding Box Cropping)
+- **문제점**: 배경 제거 후 생성된 PNG 파일의 외곽 투명 여백으로 인해 설정한 `object_scale`이 실제 제품 크기와 다르게 적용되어 제품이 너무 작게 생성되는 현상 발생.
+- **해결**: `crop_to_bbox` 함수를 도입하여 이미지의 유효 픽셀 영역만 잘라낸 뒤 배치를 계산하도록 로직 개선. 이를 통해 정밀한 크기 제어 가능.
+
+### 2.2. 라이브러리 최신화 및 경로 최적화
+- **내용**: `diffusers` 라이브러리 v0.30+ 업데이트에 따른 VAE slicing/tiling 메서드 경고 해결.
+- **경로 관리**: `resolve_existing_path` 유틸리티를 제작하여 `exp1_rembg` 내의 중첩 폴더 구조에서도 파일을 안정적으로 탐색하도록 보완.
+
+### 2.3. 품목별 맞춤형 구도 설정 (Fine-tuning)
+| 품목 | 주요 조정 사항 | 결과 및 의도 |
+| :--- | :--- | :--- |
+| **와플 1** | scale 0.48, anchor_y 0.51 | 접시 중앙 안착을 위해 원본 스케일 유지 및 이전 안정 구도 복구 |
+| **케이크 1** | scale 0.62, anchor_y 0.75 | 2번 배경(dish)의 원근감을 고려하여 접시 면 위에 안정적으로 배치 |
+| **와플 2** | scale 0.62, anchor_y 0.75 | 2번 배경 프리셋을 공유하여 일관된 스케일과 접지감 부여 |
+| **음료** | scale 0.60, anchor_y 0.58 | 4번 배경의 수평적 여백을 활용한 중앙 배치로 청량감 강조 |
+| **디저트류(3번 배경)** | scale 0.55, anchor_y 0.98 | 푸딩, 케이크 등 다수 품목에 대해 하단 끝단 밀착형 자동 배치 적용 |
+
+## 3. 기술적 사양 (Technical Setup)
+- **Background Handling**: 원본 비율 보존 리사이즈 (No Padding, No Cropping)
+- **Frame Size**: 768px (속도 및 메모리 효율 최적화)
+- **Composition Method**: Hybrid (Pillow Blending + Generative Outpainting)
+- **Refinement**: SDXL Base Image-to-Image (Denoising Strength: 0.25 - 원본 유지 및 잘린 경계선 복원 중심)
+- **Shadow Effect**: 이중 레이어 동적 그림자 (Contact + Soft Shadow)
+- **Artifact Fix**: Shadow box/Rectangular artifacts 제거를 위한 전역 캔버스 블러 방식 채택
+- **Layout System**: `LAYOUT_PRESETS`를 통한 배경별 자동 좌표/스케일 할당
+- **Edge Smoothing**: 알파 채널 가우시안 블러(Radius 1.2) 안티앨리어싱 적용
+- **Color Matching**: Local Mean-Shift 로직 적용 (제품 배치 영역의 배경색 25% 반영)
+- **Processing Speed**: 모델 로딩 생략으로 실행 즉시 결과 도출 가능
+
+## 4. 실험 결과 요약
+1. **픽셀 보존**: AI 추론 단계를 생략하고 직접 합성 방식을 채택하여 원본 제품의 디테일과 색상을 100% 왜곡 없이 유지함.
+2. **접지감 개선**: 제품 하단에 동적 Gaussian Blur 기반의 그림자 레이어를 생성하여 공중에 떠 있는 느낌을 제거하고 테이블에 안착한 효과 구현.
+3. **구도 일관성**: 여백 제거 로직 덕분에 다양한 크기의 원본 사진을 입력해도 결과물 내의 제품 크기가 일정하게 유지됨.
+4. **자동화 효율**: 배경별 프리셋 도입으로 새로운 이미지가 추가되어도 별도의 코드 수정 없이 일관된 구도 생성 가능.
+
+## 5. 향후 계획
+- **그림자 고도화**: 단순 블러 기반 그림자에서 IC-Light를 이용한 광원 방향 일치형 그림자 생성 실험 예정.
+- **다양한 규격 대응**: 인스타그램 스토리(9:16) 및 웹 배너(16:9) 확장을 위한 배경 확장(Outpainting) 로직 결합.

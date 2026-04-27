@@ -1,7 +1,11 @@
 from diffusers import StableDiffusionPipeline
 import torch
+import sys
+import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from observability import build_langfuse_media_list, log_langfuse_trace
 
 def get_device():
     return "cuda" if torch.cuda.is_available() else "cpu"
@@ -12,6 +16,7 @@ def generate_image(
     negative_prompt: str,
     output_dir: str = "backend/image_generator"
 ):
+    start_time = time.time()
     device = get_device()
 
     print(f"Using device: {device}")
@@ -39,6 +44,15 @@ def generate_image(
         save_path = output_path / f"output_{i}.png"
         image.save(save_path)
         print(f"Saved to {save_path}")
+
+    saved_paths = [str(path) for path in sorted(output_path.glob("output_*.png"))]
+    log_langfuse_trace(
+        name="image_generator.inference",
+        input={"prompt": prompt, "negative_prompt": negative_prompt, "output_dir": output_dir, "device": device},
+        output={"saved_paths": saved_paths, "output_images": build_langfuse_media_list(saved_paths)},
+        metadata={"duration_sec": time.time() - start_time},
+        tags=["image_generator", "experiment", "sd15"],
+    )
 
 
 if __name__ == "__main__":

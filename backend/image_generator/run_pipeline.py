@@ -1,73 +1,56 @@
-import argparse
-import shutil
+import sys
+import time
 from pathlib import Path
 
-from case4_ip_adapter import generate_image_case4_ip_adapter
+from inference_base import SDXLBaseGenerator, save_images as save_base_images
 
-DEFAULT_REFERENCE_IMAGE = (
-    Path(__file__).resolve().parent / "reference_presets" / "default.png"
-)
-
-
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run image generation pipeline (Case4 IP-Adapter)")
-
-    parser.add_argument("--prompt", type=str, required=True, help="Main generation prompt")
-    parser.add_argument("--output_dir", type=str, default="outputs", help="Output directory")
-
-    # 기존 흐름에서 전달되는 사용자 이미지
-    parser.add_argument("--image_path", type=str, default=None, help="User source image path")
-
-    # 무드별 프리셋 이미지 경로 (없으면 기본 프리셋 사용)
-    parser.add_argument(
-        "--reference_image_path",
-        type=str,
-        default=str(DEFAULT_REFERENCE_IMAGE),
-        help="Reference preset image path",
-    )
-
-    parser.add_argument("--format_type", type=str, default="피드")
-    parser.add_argument("--ip_adapter_scale", type=float, default=0.7)
-    parser.add_argument("--strength", type=float, default=0.6)
-
-    return parser
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from observability import build_langfuse_media_list, log_langfuse_trace
 
 
 def run_pipeline() -> None:
-    parser = build_parser()
-    args = parser.parse_args()
+    start_time = time.time()
+    prompt = """
+Japanese tonkatsu pork cutlet,
+crispy golden panko crust,
+served on a white plate with shredded cabbage,
+close-up food photography,
+soft natural lighting,
+high quality, realistic
+"""
 
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    negative_prompt = """
+egg, mushroom, strange food, mixed dishes,
+deformed, unrealistic, weird texture,
+blurry, low quality
+"""
 
-    if not args.image_path:
-        raise ValueError("Case4 requires --image_path (user image).")
+    output_dir = "outputs"
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    user_image_path = Path(args.image_path)
-    if not user_image_path.exists():
-        raise FileNotFoundError(f"User image not found: {user_image_path}")
+    base_generator = SDXLBaseGenerator()
+    base_images = base_generator.generate(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        num_images_per_prompt=1,
+        num_inference_steps=25,
+        guidance_scale=7.5,
+        height=768,
+        width=768,
+    )
+    save_base_images(base_images, output_dir, "base")
+    output_paths = [str(path) for path in sorted(Path(output_dir).glob("base*.png"))]
 
-    ref_path = Path(args.reference_image_path)
-    if not ref_path.exists():
-        # 프리셋 파일이 아직 준비되지 않은 경우, 사용자 이미지를 임시 레퍼런스로 사용
-        ref_path = user_image_path
-
-    result = generate_image_case4_ip_adapter(
-        user_image_path=str(user_image_path),
-        reference_image_path=str(ref_path),
-        user_prompt=args.prompt,
-        format_type=args.format_type,
-        ip_adapter_scale=args.ip_adapter_scale,
-        strength=args.strength,
+    log_langfuse_trace(
+        name="image_generator.run_pipeline",
+        input={"prompt": prompt, "negative_prompt": negative_prompt, "output_dir": output_dir},
+        output={"saved_paths": output_paths, "output_images": build_langfuse_media_list(output_paths)},
+        metadata={"duration_sec": time.time() - start_time},
+        tags=["image_generator", "experiment", "pipeline"],
     )
 
-    generated_path = Path(result["path"])
-    target_path = output_dir / "base_0.png"
-    shutil.copyfile(generated_path, target_path)
-
-    print("\n[Pipeline] Case4 generation done.")
-    print(f"[Pipeline] Source: {generated_path}")
-    print(f"[Pipeline] Copied to: {target_path}")
+    print("\n[Pipeline] Base generation done.")
+    print("[Pipeline] Check outputs in backend/image_generator/outputs/")
 
 
 if __name__ == "__main__":
