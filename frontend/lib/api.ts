@@ -84,7 +84,6 @@ export interface RunGenerationRequest {
   mood?: string
   reference_preset?: string
   extra_prompt?: string
-  reference_preset?: string
   channel?: string
   image_file?: File
 }

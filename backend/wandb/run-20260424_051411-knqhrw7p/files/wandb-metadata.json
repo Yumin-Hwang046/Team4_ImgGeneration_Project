@@ -1,0 +1,47 @@
+{
+  "os": "Linux-5.10.0-39-cloud-amd64-x86_64-with-glibc2.31",
+  "python": "CPython 3.10.17",
+  "startedAt": "2026-04-24T05:14:11.245130Z",
+  "args": [
+    "main:app",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8000",
+    "--reload"
+  ],
+  "program": "/home/apple/Team4_ImgGeneration_Project/.venv/bin/uvicorn",
+  "codePath": ".venv/bin/uvicorn",
+  "git": {
+    "remote": "https://github.com/Yumin-Hwang046/Team4_ImgGeneration_Project.git",
+    "commit": "a23780cebcdda123f2fbe3ce3213bba276966391"
+  },
+  "email": "yumin.hwang495@gmail.com",
+  "root": "/home/apple/Team4_ImgGeneration_Project/backend",
+  "host": "instance-20260405-204448",
+  "executable": "/home/apple/Team4_ImgGeneration_Project/.venv/bin/python",
+  "cpu_count": 2,
+  "cpu_count_logical": 4,
+  "gpu": "NVIDIA L4",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "105426538496",
+      "used": "90009985024"
+    }
+  },
+  "memory": {
+    "total": "16785801216"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA L4",
+      "memoryTotal": "24152899584",
+      "cudaCores": 7424,
+      "architecture": "Ada",
+      "uuid": "GPU-8bdf16e4-6c4e-22d6-bb0c-998093111f81"
+    }
+  ],
+  "cudaVersion": "12.4",
+  "writerId": "hgzfomv44cqywk8x0nxg9upif7aosm6q"
+}

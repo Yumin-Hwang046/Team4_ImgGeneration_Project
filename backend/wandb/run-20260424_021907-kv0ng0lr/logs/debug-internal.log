@@ -1,0 +1,215 @@
+{"time":"2026-04-24T02:19:07.960780908Z","level":"INFO","msg":"wandb-core"}
+{"time":"2026-04-24T02:19:07.962039643Z","level":"INFO","msg":"stream: starting","core version":"0.26.0"}
+{"time":"2026-04-24T02:19:08.102511352Z","level":"INFO","msg":"stream: created new stream","id":"kv0ng0lr"}
+{"time":"2026-04-24T02:19:08.102593226Z","level":"INFO","msg":"handler: started"}
+{"time":"2026-04-24T02:19:08.102719138Z","level":"INFO","msg":"stream: started"}
+{"time":"2026-04-24T02:19:08.102765468Z","level":"INFO","msg":"writer: started","stream_id":"kv0ng0lr"}
+{"time":"2026-04-24T02:19:08.102895494Z","level":"INFO","msg":"sender: started"}
+{"time":"2026-04-24T02:19:08.719652999Z","level":"INFO","msg":"filestream: sending request","total_files":1}
+{"time":"2026-04-24T02:19:08.869916988Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:19:23.719816223Z","level":"INFO","msg":"filestream: sending request","total_files":4,"history_offset":0,"history_lines":4,"events_offset":0,"events_lines":2,"console_offset":0,"console_lines":5,"uploaded_len":2}
+{"time":"2026-04-24T02:19:24.390517808Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:19:38.720322137Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":2,"events_lines":2}
+{"time":"2026-04-24T02:19:38.975998262Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:19:53.719554282Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":4,"events_lines":2}
+{"time":"2026-04-24T02:19:53.914274374Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:20:08.719882322Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":6,"events_lines":2}
+{"time":"2026-04-24T02:20:08.960743546Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:20:23.719879349Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":8,"events_lines":2}
+{"time":"2026-04-24T02:20:23.866164192Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:20:38.72029928Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":10,"events_lines":2}
+{"time":"2026-04-24T02:20:38.909025373Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:20:53.720379315Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":12,"events_lines":2}
+{"time":"2026-04-24T02:20:53.880184794Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:21:08.720509356Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":14,"events_lines":2}
+{"time":"2026-04-24T02:21:08.983968629Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:21:23.719662615Z","level":"INFO","msg":"filestream: sending request","total_files":2,"events_offset":16,"events_lines":2,"console_offset":5,"console_lines":12}
+{"time":"2026-04-24T02:21:23.987542509Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:21:38.719985209Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":18,"events_lines":2}
+{"time":"2026-04-24T02:21:39.019505148Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:21:53.719687455Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":20,"events_lines":2}
+{"time":"2026-04-24T02:21:53.96648323Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:22:08.720282389Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":22,"events_lines":2}
+{"time":"2026-04-24T02:22:08.944984521Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:22:23.720658608Z","level":"INFO","msg":"filestream: sending request","total_files":4,"history_offset":4,"history_lines":3,"events_offset":24,"events_lines":2,"console_offset":17,"console_lines":4}
+{"time":"2026-04-24T02:22:24.040955787Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:22:38.719631064Z","level":"INFO","msg":"filestream: sending request","total_files":2,"events_offset":26,"events_lines":2,"console_offset":21,"console_lines":7}
+{"time":"2026-04-24T02:22:38.910847268Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:22:48.783485675Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error writing: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:48.784885806Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:48.785247749Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:48.785267253Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:48.785281121Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:48.785289625Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:49.439445638Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:51.713678845Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:53.540565204Z","level":"ERROR","msg":"failed to write to chunk: failed to append: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/files/output.log: no space left on device"}
+{"time":"2026-04-24T02:22:53.573122819Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:53.578055841Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:22:53.720548345Z","level":"INFO","msg":"filestream: sending request","total_files":4,"history_offset":7,"history_lines":1,"events_offset":28,"events_lines":2,"console_offset":28,"console_lines":7}
+{"time":"2026-04-24T02:22:53.907284135Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:22:54.005596128Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on{"time":"2026-04-24T02:26:38.573741634Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:26:38.574230984Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:26:38.720405216Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":58,"events_lines":2}
+{"time":"2026-04-24T02:26:38.880473475Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:26:53.573251121Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:26:53.579019548Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:26:53.720196354Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":60,"events_lines":2}
+{"time":"2026-04-24T02:26:53.957094702Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:27:08.573242095Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:27:08.574524068Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:27:08.719569728Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":62,"events_lines":2}
+{"time":"2026-04-24T02:27:08.984159143Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:27:23.573199438Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:27:23.574546448Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:27:23.720422556Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":64,"events_lines":2}
+{"time":"2026-04-24T02:27:23.957723822Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:27:38.573706572Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:27:38.575566664Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:27:38.719764597Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":66,"events_lines":2}
+{"time":"2026-04-24T02:27:38.953318373Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:27:53.573180755Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:27:53.574470139Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:27:53.719754474Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":68,"events_lines":2}
+{"time":"2026-04-24T02:27:53.886892562Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:28:08.573618762Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:28:08.574251941Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:28:08.71985824Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":70,"events_lines":2}
+{"time":"2026-04-24T02:28:08.88922669Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:28:23.573511615Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:28:23.573742395Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:28:23.720143041Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":72,"events_lines":2}
+{"time":"2026-04-24T02:28:23.914698818Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:28:38.573784432Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:28:38.574238726Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:28:38.720162529Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":74,"events_lines":2}
+{"time":"2026-04-24T02:28:38.886282613Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:28:53.573749405Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:28:53.574930958Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:28:53.72028706Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":76,"events_lines":2}
+{"time":"2026-04-24T02:28:53.977923136Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:29:08.573319388Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:29:08.575605878Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:29:08.72021934Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":78,"events_lines":2}
+{"time":"2026-04-24T02:29:08.970906085Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:29:23.572811519Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:29:23.573092844Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:29:23.720436687Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":80,"events_lines":2}
+{"time":"2026-04-24T02:29:23.939758185Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:29:38.573967562Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:29:38.574951665Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:29:38.719645495Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":82,"events_lines":2}
+{"time":"2026-04-24T02:29:38.944266702Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:29:53.57306483Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:29:53.573516861Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:29:53.72059307Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":84,"events_lines":2}
+{"time":"2026-04-24T02:29:54.054428939Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:30:08.572941425Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:30:08.573131027Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:30:08.719792842Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":86,"events_lines":2}
+{"time":"2026-04-24T02:30:08.960323934Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:30:23.573717026Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:30:23.576464554Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:30:23.719898912Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":88,"events_lines":2}
+{"time":"2026-04-24T02:30:23.942651928Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:30:38.573039489Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:30:38.573697713Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:30:38.720195115Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":90,"events_lines":2}
+{"time":"2026-04-24T02:30:38.9733321Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:30:53.572806813Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:30:53.574053378Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:30:53.720021748Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":92,"events_lines":2}
+{"time":"2026-04-24T02:30:53.946512595Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:31:08.573356707Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:31:08.57369575Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:31:08.720229653Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":94,"events_lines":2}
+{"time":"2026-04-24T02:31:08.90932431Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:31:23.573339663Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:31:23.576406836Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:31:23.720297239Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":96,"events_lines":2}
+{"time":"2026-04-24T02:31:24.019157797Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:31:38.573294206Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:31:38.573788121Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:31:38.720503966Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":98,"events_lines":2}
+{"time":"2026-04-24T02:31:38.989016181Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:31:53.57341943Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:31:53.576869338Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:31:53.720501532Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":100,"events_lines":2}
+{"time":"2026-04-24T02:31:54.003915592Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:32:08.573470704Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:32:08.57385176Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:32:08.719533789Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":102,"events_lines":2}
+{"time":"2026-04-24T02:32:08.869439677Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:32:23.573411099Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:32:23.573771515Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:32:23.719560005Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":104,"events_lines":2}
+{"time":"2026-04-24T02:32:23.923977953Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:32:38.573830058Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:32:38.575033604Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:32:38.719640863Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":106,"events_lines":2}
+{"time":"2026-04-24T02:32:38.935815083Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:32:53.573002873Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:32:53.573646992Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:32:53.719732279Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":108,"events_lines":2}
+{"time":"2026-04-24T02:32:53.954842029Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:33:08.573802387Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:33:08.575077039Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:33:08.719726924Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":110,"events_lines":2}
+{"time":"2026-04-24T02:33:08.9342151Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:33:23.57379253Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:33:23.574933674Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:33:23.719940702Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":112,"events_lines":2}
+{"time":"2026-04-24T02:33:23.913329943Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:33:38.57332243Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:33:38.573685154Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:33:38.72008671Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":114,"events_lines":2}
+{"time":"2026-04-24T02:33:38.986987414Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:33:53.57389121Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:33:53.575039471Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:33:53.719597155Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":116,"events_lines":2}
+{"time":"2026-04-24T02:33:53.9035878Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:34:08.573111991Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:34:08.573378659Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:34:08.719895357Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":118,"events_lines":2}
+{"time":"2026-04-24T02:34:08.855481964Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:34:23.573069201Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:34:23.573355798Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:34:23.719931589Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":120,"events_lines":2}
+{"time":"2026-04-24T02:34:23.94394875Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:34:38.573169227Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:34:38.573490269Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:34:38.720058954Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":122,"events_lines":2}
+{"time":"2026-04-24T02:34:38.954804194Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:34:53.573608262Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:34:53.574373851Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:34:53.719795975Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":124,"events_lines":2}
+{"time":"2026-04-24T02:34:53.861549953Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:35:08.573106368Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:35:08.574354586Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:35:08.719756487Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":126,"events_lines":2}
+{"time":"2026-04-24T02:35:08.997516721Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:35:23.573198565Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:35:23.573430484Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:35:23.720099041Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":128,"events_lines":2}
+{"time":"2026-04-24T02:35:23.912961639Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:35:38.573464454Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:35:38.577488359Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:35:38.719906677Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":130,"events_lines":2}
+{"time":"2026-04-24T02:35:38.96137467Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:35:53.573806176Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:35:53.57483276Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:35:53.720246089Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":132,"events_lines":2}
+{"time":"2026-04-24T02:35:53.884131889Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:36:08.573339786Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:36:08.576371854Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:36:08.719919542Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":134,"events_lines":2}
+{"time":"2026-04-24T02:36:08.933328128Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:36:23.572947023Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:36:23.573183942Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:36:23.719903906Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":136,"events_lines":2}
+{"time":"2026-04-24T02:36:23.900221985Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:36:38.573250204Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:36:38.574578433Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}
+{"time":"2026-04-24T02:36:38.720113483Z","level":"INFO","msg":"filestream: sending request","total_files":1,"events_offset":138,"events_lines":2}
+{"time":"2026-04-24T02:36:38.879766151Z","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
+{"time":"2026-04-24T02:36:43.812476479Z","level":"ERROR","msg":"writer: failed to save record: transactionlog: error starting next record: write /home/apple/Team4_ImgGeneration_Project/backend/wandb/run-20260424_021907-kv0ng0lr/run-kv0ng0lr.wandb: no space left on device"}

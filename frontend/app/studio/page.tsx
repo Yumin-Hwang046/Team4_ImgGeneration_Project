@@ -171,9 +171,6 @@ export default function StudioPage() {
               {/* Step 2: Contextual Reference */}
               <section className="space-y-4">
                 <StepLabel step={2} label="Contextual Reference" />
-                <p className="text-sm text-on-surface-variant">
-                  회원가입에서 선택한 페르소나: <span className="font-bold text-on-surface">{MOOD_LABELS[selectedMood]}</span>
-                </p>
                 <div className="grid grid-cols-4 gap-3">
                   {referenceOptions.map(opt => {
                     const previewSrc = `/reference_presets/${opt.filename}`
