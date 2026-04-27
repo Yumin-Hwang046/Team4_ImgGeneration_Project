@@ -362,10 +362,10 @@ Team4_ImgGeneration_Project1/
 
 | 이름 | 역할 | Github | 협업일지 |
 |------|------|--------|----------|
-| 황유민 | PM/모델 | [![Yumin-Hwang046](https://github.com/Yumin-Hwang046.png?size=40)](https://github.com/Yumin-Hwang046) | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb906180b7aa05dda6a9739931?v=333826fb906180ffb807000ca369af84) |
-| 김슬기 | 모델 | [![devskk25](https://github.com/devskk25.png?size=40)](https://github.com/devskk25) | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb9061803c87fdcd48cff9c353?v=333826fb906181a08997000ca6f45287) |
-| 문진우 | 프론트엔드/서빙 | [![dinu1108](https://github.com/dinu1108.png?size=40)](https://github.com/dinu1108) | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb9061808b9768ec8ee7f1cd2e?v=333826fb90618136acce000c662dbbc5) |
-| 김민주 | 백엔드/모델 | [![kmjlast-dev](https://github.com/kmjlast-dev.png?size=40)](https://github.com/kmjlast-dev) | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb90618042b9dae519f7f57dc7?v=333826fb906181da9569000c2f5694aa) |
+| 황유민 | PM/모델 | <a href="https://github.com/Yumin-Hwang046"><img src="https://github.com/Yumin-Hwang046.png?size=40" width="40" height="40" /></a> | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb906180b7aa05dda6a9739931?v=333826fb906180ffb807000ca369af84) |
+| 김슬기 | 모델 | <a href="https://github.com/devskk25"><img src="https://github.com/devskk25.png?size=40" width="40" height="40" /></a> | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb9061803c87fdcd48cff9c353?v=333826fb906181a08997000ca6f45287) |
+| 문진우 | 프론트엔드/서빙 | <a href="https://github.com/dinu1108"><img src="https://github.com/dinu1108.png?size=40" width="40" height="40" /></a> | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb9061808b9768ec8ee7f1cd2e?v=333826fb90618136acce000c662dbbc5) |
+| 김민주 | 백엔드/모델 | <a href="https://github.com/kmjlast-dev"><img src="https://github.com/kmjlast-dev.png?size=40" width="40" height="40" /></a> | [![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/333826fb90618042b9dae519f7f57dc7?v=333826fb906181da9569000c2f5694aa) |
 
 <br>
 
