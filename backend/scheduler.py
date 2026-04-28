@@ -97,11 +97,15 @@ def _process_one(db, schedule: UploadSchedule):
             _fail(db, schedule, "업로드할 이미지 없음")
             return
 
+        from generations import to_public_media_url
+        from instagram_router import _upload_to_cdn
         caption = _build_caption(generation)
+        img_url = to_public_media_url(generation.generated_image_url, absolute=True)
+        img_url = _upload_to_cdn(img_url)
         _publish_media(
             user.instagram_account_id,
             user.instagram_access_token,
-            generation.generated_image_url,
+            img_url,
             caption,
             schedule.channel,
         )

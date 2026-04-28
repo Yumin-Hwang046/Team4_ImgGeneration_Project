@@ -80,9 +80,10 @@ GENERATED_DIR = (
 )
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
-TEXT_GENERATOR_URL = os.getenv("TEXT_GENERATOR_URL", "").strip()
-IMAGE_GENERATOR_URL = os.getenv("IMAGE_GENERATOR_URL", "").strip()
+TEXT_GENERATOR_URL = os.getenv("TEXT_GENERATOR_URL", "http://model:8001/generate-text").strip()
+IMAGE_GENERATOR_URL = os.getenv("IMAGE_GENERATOR_URL", "http://model:8001/generate-image").strip()
 TEXT_MODEL_NAME = (os.getenv("TEXT_MODEL_NAME", "").strip() or "gpt-5-mini")
+IMAGE_GENERATOR_TIMEOUT = int(os.getenv("IMAGE_GENERATOR_TIMEOUT", "600"))
 
 def _safe_slug(text: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in text)[:50]
@@ -175,53 +176,34 @@ def _build_image_prompt(
 def _resolve_reference_preset_path(
     mood: Optional[str],
     reference_preset: Optional[str] = None,
-) -> Path:
-    preset_key = _clean_text(reference_preset).lower()
-    explicit_number_map = {
-        "fc_205.png": "1",
-        "fc_206.png": "2",
-        "fc_211.png": "3",
-        "fc_217.png": "4",
-        "warm.png": "1",
-        "clean.png": "2",
-        "trendy.png": "3",
-        "premium.png": "4",
-        "1": "1",
-        "2": "2",
-        "3": "3",
-        "4": "4",
+) -> tuple[Path, str]:
+    """배경 파일 경로와 LAYOUT_PRESETS 키(background_id)를 반환합니다.
+
+    프론트에서 넘어오는 fc_ 파일명 → 배경만 있는 bg 파일로 매핑합니다.
+    UI 순서: position1=1_dish_bg, position2=2_dish_bg, position3=4_bg, position4=3_bg
+    """
+    # fc 파일명 → (bg 파일명, LAYOUT_PRESETS 키)
+    FC_TO_BG: dict[str, tuple[str, str]] = {
+        "fc_205.png": ("1_bg.webp", "1_dish_bg"),
+        "fc_206.png": ("2_bg.png",  "2_dish_bg"),
+        "fc_211.png": ("4_bg.webp", "4_bg"),
+        "fc_217.png": ("3_bg.webp", "3_bg"),
     }
-    explicit_number = explicit_number_map.get(preset_key)
 
-    mood_key = _clean_text(mood).lower()
-    preset_number_map = {
-        "warm": "1",
-        "따뜻한": "1",
-        "clean": "2",
-        "깔끔한": "2",
-        "trendy": "3",
-        "트렌디": "3",
-        "premium": "4",
-        "프리미엄": "4",
-    }
-    preferred_number = preset_number_map.get(mood_key, "1")
+    preset_key = _clean_text(reference_preset).lower() if reference_preset else ""
+    bg_filename, background_id = FC_TO_BG.get(preset_key, ("1_bg.webp", "1_dish_bg"))
 
-    numbers_to_try = []
-    if explicit_number:
-        numbers_to_try.append(explicit_number)
-    numbers_to_try.extend([preferred_number, "1", "2", "3", "4"])
+    candidate = REFERENCE_PRESET_DIR / bg_filename
+    if candidate.is_file():
+        return candidate, background_id
 
-    seen = set()
-    for number in numbers_to_try:
-        if number in seen:
-            continue
-        seen.add(number)
-        candidates = sorted(path for path in REFERENCE_PRESET_DIR.glob(f"{number}*") if path.is_file())
-        if candidates:
-            return candidates[0]
+    # 폴백: 찾을 수 있는 첫 번째 bg 파일
+    for fname, bid in FC_TO_BG.values():
+        p = REFERENCE_PRESET_DIR / fname
+        if p.is_file():
+            return p, bid
 
-    default_candidate = REFERENCE_PRESET_DIR / "default.png"
-    return default_candidate
+    return REFERENCE_PRESET_DIR / "1_bg.webp", "1_dish_bg"
 
 
 def _fallback_text_result(
@@ -266,23 +248,45 @@ def _fallback_text_result(
 # =========================
 # IMAGE GENERATOR
 # =========================
-def _call_remote_image_generator(prompt: str, run_name: str) -> Optional[Dict]:
+def _encode_image_base64(image_path: str) -> Optional[str]:
+    try:
+        import base64
+        return base64.b64encode(Path(image_path).read_bytes()).decode()
+    except Exception:
+        return None
+
+
+def _call_remote_image_generator(
+    prompt: str,
+    run_name: str,
+    image_path: Optional[str] = None,
+    reference_path: Optional[str] = None,
+    background_id: Optional[str] = None,
+) -> Optional[Dict]:
     if not IMAGE_GENERATOR_URL:
         return None
     try:
-        resp = requests.post(
-            IMAGE_GENERATOR_URL,
-            json={"prompt": prompt},
-            timeout=120,
-        )
+        payload: Dict[str, Any] = {"prompt": prompt}
+
+        if image_path and reference_path:
+            product_b64 = _encode_image_base64(image_path)
+            reference_b64 = _encode_image_base64(reference_path)
+            if product_b64 and reference_b64:
+                payload["product_image_base64"] = product_b64
+                payload["reference_image_base64"] = reference_b64
+                if background_id:
+                    payload["background_id"] = background_id
+
+        resp = requests.post(IMAGE_GENERATOR_URL, json=payload, timeout=IMAGE_GENERATOR_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
         image_b64 = data.get("image_base64")
         if not image_b64:
             return None
 
-        import base64
-        output_dir = GENERATED_DIR / run_name
+        import base64, time
+        ts = int(time.time() * 1000)
+        output_dir = GENERATED_DIR / f"{run_name}_{ts}"
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / "base_0.png"
         output_path.write_bytes(base64.b64decode(image_b64))
@@ -301,7 +305,6 @@ def call_image_generator(
     menu_name: str,
     location: str,
     mood: Optional[str],
-    reference_preset: Optional[str],
     recommended_concept: str,
     reference_preset: Optional[str] = None,
     extra_prompt: Optional[str] = None,
@@ -326,41 +329,28 @@ def call_image_generator(
         )
 
         run_name = f"{_safe_slug(menu_name)}_{_safe_slug(business_category)}"
-        exp16_error_message = None
 
+        reference_path: Optional[str] = None
+        background_id: Optional[str] = None
         if image_path:
-            try:
-                from image_generator.exp16_gpt_image_mini import generate_image_exp16_api
+            ref, background_id = _resolve_reference_preset_path(mood, reference_preset)
+            if ref.exists():
+                reference_path = str(ref)
 
-                exp16_result = generate_image_exp16_api(
-                    user_image_path=str(image_path),
-                    reference_image_path=str(_resolve_reference_preset_path(mood, reference_preset)),
-                    user_prompt=prompt,
-                    format_type="피드",
-                    output_subdir=run_name,
-                )
-                _wandb_log_safe({
-                    "trace_stage": "call_image_generator_exp16_success",
-                    "menu_name": menu_name,
-                    "model": "gpt-image-1-mini",
-                })
-                return {
-                    "success": True,
-                    "image_url": exp16_result["path"],
-                    "prompt_used": prompt,
-                    "error": None,
-                }
-            except Exception as exp16_error:
-                exp16_error_message = str(exp16_error)
-                _wandb_log_safe({
-                    "trace_stage": "call_image_generator_exp16_fallback",
-                    "menu_name": menu_name,
-                    "error": exp16_error_message,
-                })
-
-        remote = _call_remote_image_generator(prompt, run_name)
+        remote = _call_remote_image_generator(
+            prompt=prompt,
+            run_name=run_name,
+            image_path=image_path,
+            reference_path=reference_path,
+            background_id=background_id,
+        )
         if remote:
             if remote.get("success"):
+                _wandb_log_safe({
+                    "trace_stage": "call_image_generator_success",
+                    "menu_name": menu_name,
+                    "has_input_image": bool(image_path),
+                })
                 return remote
             return {
                 "success": False,
@@ -373,10 +363,7 @@ def call_image_generator(
             "success": False,
             "image_url": None,
             "prompt_used": prompt,
-            "error": (
-                "GPT-image 경로 실패 후 사용할 로컬 SDXL fallback은 제거되었습니다."
-                + (f" | exp16_error={exp16_error_message}" if exp16_error_message else "")
-            ),
+            "error": "이미지 생성 실패",
         }
 
     except Exception as e:
@@ -447,12 +434,13 @@ def _call_local_text_generator(
             "문구에는 괄호 설명을 붙이지 말고, 해시태그는 문구와 중복되더라도 자연스럽게 선택한다."
         )
 
-        response = client.responses.create(
+        response = client.chat.completions.create(
             model=TEXT_MODEL_NAME,
-            input=prompt,
-            max_output_tokens=500,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            response_format={"type": "json_object"},
         )
-        output_text = getattr(response, "output_text", "") or ""
+        output_text = (response.choices[0].message.content or "") if response.choices else ""
         parsed = _extract_json_object(output_text)
         if not parsed:
             return {

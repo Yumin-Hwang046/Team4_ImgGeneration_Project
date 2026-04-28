@@ -16,7 +16,7 @@ try:
 except Exception:
     wandb = None
 
-from text_generator.prompt_templates_improved import get_full_prompt
+from text_generator.prompt_templates import get_full_prompt
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 

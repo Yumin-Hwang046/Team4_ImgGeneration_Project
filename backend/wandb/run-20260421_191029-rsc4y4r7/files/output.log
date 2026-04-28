@@ -1,6 +1,0 @@
-[34m[1mwandb[0m: Detected [openai] in use.
-[34m[1mwandb[0m: Use W&B Weave for improved LLM call tracing. Install Weave with `pip install weave` then add `import weave` to the top of your script.
-[34m[1mwandb[0m: For more information, check out the docs at: https://weave-docs.wandb.ai
-Error code: 400 - {'error': {'message': "Unsupported value: 'temperature' does not support 0.9 with this model. Only the default (1) value is supported.", 'type': 'invalid_request_error', 'param': 'temperature', 'code': 'unsupported_value'}}
-[32mINFO[0m:     127.0.0.1:54958 - "[1mPOST /text/generate HTTP/1.1[0m" [32m200 OK[0m
-Error code: 400 - {'error': {'message': "Unsupported value: 'temperature' does not support 0.9 with this model. Only the default (1) value is supported.", 'type': 'invalid_request_error', 'param': 'temperature', 'code': 'unsupported_value'}}

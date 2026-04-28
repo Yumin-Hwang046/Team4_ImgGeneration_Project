@@ -34,9 +34,16 @@ services:
     env_file:
       - model-server/.env
     volumes:
-      - /home/apple/.cache/huggingface:/root/.cache/huggingface:ro
-      - /home/apple/Team4_ImgGeneration_Project/backend/image_generator:/app/image_generator:ro
-      - /home/apple/Team4_ImgGeneration_Project/backend/text_generator:/app/text_generator:ro
+      - /home/spai0642/.cache/huggingface:/root/.cache/huggingface
+      - /home/spai0642/myproject/backend/image_generator:/app/image_generator:ro
+      - /home/spai0642/myproject/backend/text_generator:/app/text_generator:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     restart: unless-stopped
 
 volumes:

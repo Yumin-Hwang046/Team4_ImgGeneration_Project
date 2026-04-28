@@ -1,4 +1,9 @@
+import base64
+import os
 import time
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
 import requests as http_requests
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -15,7 +20,46 @@ from auth import get_current_user
 
 GRAPH_API = "https://graph.facebook.com/v19.0"
 
+_BASE_DIR = Path(__file__).resolve().parent
+_GENERATED_DIR = _BASE_DIR / "generated"
+_UPLOAD_DIR = _BASE_DIR / "uploads"
+
 router = APIRouter(prefix="/instagram", tags=["instagram"])
+
+
+def _upload_to_cdn(image_url: str) -> str:
+    """로컬 이미지를 litterbox에 올려 Meta가 접근 가능한 CDN URL 반환 (무료, 계정 불필요)"""
+    parsed = urlparse(image_url)
+    url_path = unquote(parsed.path)
+
+    local_path = None
+    if url_path.startswith("/media/generated/"):
+        local_path = _GENERATED_DIR / url_path[len("/media/generated/"):]
+    elif url_path.startswith("/media/uploads/"):
+        local_path = _UPLOAD_DIR / url_path[len("/media/uploads/"):]
+
+    if local_path and local_path.exists():
+        image_bytes = local_path.read_bytes()
+        filename = local_path.name
+    else:
+        resp = http_requests.get(image_url, timeout=30)
+        resp.raise_for_status()
+        image_bytes = resp.content
+        filename = url_path.split("/")[-1] or "image.jpg"
+
+    res = http_requests.post(
+        "https://litterbox.catbox.moe/resources/internals/api.php",
+        data={"reqtype": "fileupload", "time": "1h"},
+        files={"fileToUpload": (filename, image_bytes)},
+        timeout=60,
+    )
+    if not res.ok or not res.text.startswith("https://"):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"CDN 업로드 실패: {res.text}",
+        )
+    print(f"[Instagram] CDN URL: {res.text.strip()}")
+    return res.text.strip()
 
 
 def validate_channel(channel: str) -> str:
@@ -80,6 +124,7 @@ def _create_media_container(
     )
 
     if not res.ok:
+        print(f"[Instagram] full error response: {res.text}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Instagram 미디어 생성 실패: {res.json().get('error', {}).get('message', res.text)}",
@@ -156,7 +201,13 @@ def upload_to_instagram(
         raise HTTPException(status_code=400, detail="업로드할 이미지가 없습니다.")
 
     caption = _build_caption(generation)
-    media_id = _publish_media(ig_account_id, access_token, generation.generated_image_url, caption, channel)
+    img_url = generation.generated_image_url or ""
+    if img_url.startswith("/"):
+        base = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+        img_url = f"{base}{img_url}"
+    print(f"[Instagram] original image_url={img_url}")
+    img_url = _upload_to_cdn(img_url)
+    media_id = _publish_media(ig_account_id, access_token, img_url, caption, channel)
 
     permalink = None
     if media_id:
